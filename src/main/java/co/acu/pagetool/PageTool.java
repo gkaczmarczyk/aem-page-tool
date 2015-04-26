@@ -25,8 +25,8 @@ public class PageTool {
     private int nodesUpdated = 0;
 
     /**
-     *
-     * @param parentNodePath
+     * Class constructor
+     * @param parentNodePath The path under which all searches should be run
      */
     public PageTool(String parentNodePath) {
         this.parentNodePath = parentNodePath;
@@ -47,6 +47,7 @@ public class PageTool {
                     try {
                         slingClient.runUpdate(page.getJcrPath(), updateProperties);
                         if (slingClient.getStatusCode() == 200) {
+                            nodesUpdated++;
                             System.out.println("OK");
                         } else {
                             System.out.println("NOT OK");
@@ -55,6 +56,8 @@ public class PageTool {
                         System.out.println("NOT OK");
                     }
                 }
+                System.out.println("");
+                System.out.println(nodesUpdated + " node" + (nodesUpdated == 1 ? "" : "s") + " ha" + (nodesUpdated == 1 ? "s" : "ve") + " been updated.");
             } else {
                 System.out.println("Error accessing URL. Received " + slingClient.getStatusCode() + " status code.");
             }
@@ -74,9 +77,9 @@ public class PageTool {
     }
 
     /**
-     *
-     * @param propertiesStr
-     * @return
+     * Convert the properties given as options in the command line into a list of <code>Property</code> objects
+     * @param propertiesStr The properties given are expected to be in the format <code>property=value</code>
+     * @return ArrayList of Property objects
      */
     private ArrayList<Property> getPropertiesAsList(String[] propertiesStr) {
         ArrayList<Property> propertiesList = new ArrayList<Property>();

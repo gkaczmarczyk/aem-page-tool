@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * The class that runs a query for AEM Pages or runs a POST to the AEM Sling servlet
  * @author Gregory Kaczmarczyk
  */
 public class SlingClient {
@@ -131,6 +132,12 @@ public class SlingClient {
         return sb.toString();
     }
 
+    /**
+     * Run a query to search for all Pages under the given path which match the specified properties
+     * @param path       An existing path under which AEM Pages are being searched
+     * @param properties A list of properties which a page is expected to contain
+     * @throws IOException
+     */
     public void runRead(String path, ArrayList<Property> properties) throws IOException {
         HttpHost target = new HttpHost(conn.getHostname(), Integer.parseInt(conn.getPort()), SCHEME);
         CredentialsProvider credsProvider = new BasicCredentialsProvider();
@@ -165,6 +172,12 @@ public class SlingClient {
         }
     }
 
+    /**
+     * Run a POST to the AEM Page at the given path updating it with the given properties
+     * @param path       The page that is expected to be updated
+     * @param properties A list of properties that will be updated and/or added to the page
+     * @throws IOException
+     */
     public void runUpdate(String path, ArrayList<Property> properties) throws IOException {
         HttpHost target = new HttpHost(conn.getHostname(), Integer.parseInt(conn.getPort()), SCHEME);
         CredentialsProvider credsProvider = new BasicCredentialsProvider();
@@ -203,10 +216,18 @@ public class SlingClient {
         }
     }
 
+    /**
+     * Get the HTTP status code of the last request performed by the SlingClient
+     * @return A valid HTTP status code
+     */
     public int getStatusCode() {
         return this.statusCode;
     }
 
+    /**
+     *
+     * @return
+     */
     public String getResponseText() {
         return this.responseText;
     }

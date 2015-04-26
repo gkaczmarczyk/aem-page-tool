@@ -3,6 +3,7 @@ package co.acu.pagetool.result;
 import com.google.gson.annotations.SerializedName;
 
 /**
+ * Object that's created from the AEM query builder response JSON for each individual AEM Page
  * @author Gregory Kaczmarczyk
  */
 public class ResultPage {

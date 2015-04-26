@@ -3,6 +3,7 @@ package co.acu.pagetool.result;
 import java.util.ArrayList;
 
 /**
+ * Object created from AEM query builder response JSON
  * @author Gregory Kaczmarczyk
  */
 public class ResultSet {
