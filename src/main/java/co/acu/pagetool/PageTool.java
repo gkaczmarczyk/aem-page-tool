@@ -58,7 +58,11 @@ public class PageTool {
                 System.out.println("");
                 System.out.println(nodesUpdated + " node" + (nodesUpdated == 1 ? "" : "s") + " ha" + (nodesUpdated == 1 ? "s" : "ve") + " been updated.");
             } else {
-                System.out.println("Error accessing URL. Received " + slingClient.getStatusCode() + " status code.");
+                if (slingClient.getStatusCode() < 0) {
+                    System.out.println("Server appears disconnected. No changes made.");
+                } else {
+                    System.out.println("Error accessing URL. Received " + slingClient.getStatusCode() + " status code.");
+                }
             }
             System.out.println("");
         } catch (IOException e) {

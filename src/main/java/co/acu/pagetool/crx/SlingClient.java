@@ -151,8 +151,15 @@ public class SlingClient {
 
             HttpGet httpget = new HttpGet(buildUrl(path, properties));
 
-            System.out.println("Executing request " + httpget.getRequestLine() + " to target " + target);
-            CloseableHttpResponse response = httpclient.execute(target, httpget, localContext);
+//            System.out.println("Executing request " + httpget.getRequestLine() + " to target " + target);
+            CloseableHttpResponse response;
+            try {
+                response = httpclient.execute(target, httpget, localContext);
+            } catch (Exception e) {
+                System.out.println("There has been an error connecting to AEM. (" + e.toString() + ")");
+                httpclient.close();
+                return;
+            }
             try {
                 StatusLine status = response.getStatusLine();
                 statusCode = status.getStatusCode();
