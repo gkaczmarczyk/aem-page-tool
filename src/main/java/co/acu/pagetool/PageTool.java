@@ -14,8 +14,6 @@ import java.util.ArrayList;
  */
 public class PageTool {
 
-    static final String QUERY_BUILDER = "/bin/querybuilder.json";
-
     private CrxConnection connection;
     private String parentNodePath;
     private ArrayList<Property> matchingProperties;
