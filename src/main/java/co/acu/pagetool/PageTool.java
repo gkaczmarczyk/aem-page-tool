@@ -20,6 +20,7 @@ public class PageTool {
     private String parentNodePath;
     private ArrayList<Property> matchingProperties;
     private ArrayList<Property> updateProperties;
+    private ArrayList<String> deleteProperties;
 
     private SlingClient slingClient;
     private int nodesUpdated = 0;
@@ -35,27 +36,38 @@ public class PageTool {
     }
 
     private void runProcess() {
+        if (PageToolApp.dryRun) {
+            System.out.println("Dry Run of update operation ...");
+        }
         try {
             slingClient.runRead(parentNodePath, matchingProperties);
             System.out.println("");
             if (slingClient.getStatusCode() == 200) {
                 Gson gson = new Gson();
                 ResultSet results = gson.fromJson(slingClient.getResponseText(), ResultSet.class);
-                System.out.println("Found " + results.getTotal() + " page" + (results.getTotal() == 1 ? "" : "s") + ". Updating pages now...");
+                System.out.print("Found " + results.getTotal() + " page" + (results.getTotal() == 1 ? "" : "s") + ". ");
+                System.out.println((!PageToolApp.dryRun) ? "Updating pages now..." : "Pages to be updated:");
+
                 for (ResultPage page : results.getHits()) {
-                    System.out.print("Updating " + page.getJcrPath() + " ...");
-                    try {
-                        slingClient.runUpdate(page.getJcrPath(), updateProperties);
-                        if (slingClient.getStatusCode() == 200) {
-                            nodesUpdated++;
-                            System.out.println("OK");
-                        } else {
-                            System.out.println("NOT OK");
+                    System.out.print((!PageToolApp.dryRun ? "Updating " : "    ") + page.getJcrPath());
+                    if (!PageToolApp.dryRun) {
+                        System.out.print(" ...");
+                        try {
+                            slingClient.runUpdate(page.getJcrPath(), updateProperties, deleteProperties);
+                            if (slingClient.getStatusCode() == 200) {
+                                nodesUpdated++;
+                                System.out.println("OK");
+                            } else {
+                                System.out.println("NOT OK" + (PageToolApp.verbose ? " (HTTP=" + slingClient.getStatusCode() + ")" : ""));
+                            }
+                        } catch (Exception e) {
+                            System.out.println("NOT OK" + (PageToolApp.verbose ? " (" + e.toString() + ")" : ""));
                         }
-                    } catch (Exception e) {
-                        System.out.println("NOT OK");
+                    } else {
+                        System.out.println("");
                     }
                 }
+
                 System.out.println("");
                 System.out.println(nodesUpdated + " node" + (nodesUpdated == 1 ? "" : "s") + " ha" + (nodesUpdated == 1 ? "s" : "ve") + " been updated.");
             } else {
@@ -76,7 +88,6 @@ public class PageTool {
      */
     public void run() {
         slingClient = new SlingClient(this.connection);
-//        curl.run();
         runProcess();
     }
 
@@ -146,6 +157,29 @@ public class PageTool {
             System.out.println("  Properties to update:");
         }
         this.updateProperties = getPropertiesAsList(properties);
+    }
+
+    public ArrayList<String> getDeleteProperties() {
+        return deleteProperties;
+    }
+
+    public void setDeleteProperties(ArrayList<String> deleteProperties) {
+        this.deleteProperties = deleteProperties;
+    }
+
+    public void setDeleteProperties(String[] properties) throws InvalidPropertyException {
+        if (this.deleteProperties == null) {
+            this.deleteProperties = new ArrayList<String>();
+        }
+        if (PageToolApp.verbose) {
+            System.out.println("  Properties to delete:");
+        }
+        for (String prop : properties) {
+            if (PageToolApp.verbose) {
+                System.out.println("    " + prop);
+            }
+            this.deleteProperties.add(prop);
+        }
     }
 
 }
