@@ -96,32 +96,36 @@ public class SlingClient {
                     .append("&p.nodedepth=")
                     .append(nodeDepth);
 
-            int propCtr = (properties.size() > 1) ? 1 : -1;
-            for (Property prop : properties) {
-                String propKey = ((propCtr < 1) ? "" : propCtr++ + "_") + "property";
-                sb.append('&')
-                        .append(propKey)
-                        .append('=')
-                        .append("jcr:content/")
-                        .append(prop.getName())
-                        .append('&')
-                        .append(propKey)
-                        .append(".value=")
-                        .append(prop.getValue());
+            if (properties != null) {
+                int propCtr = (properties.size() > 1) ? 1 : -1;
+                for (Property prop : properties) {
+                    String propKey = ((propCtr < 1) ? "" : propCtr++ + "_") + "property";
+                    sb.append('&')
+                            .append(propKey)
+                            .append('=')
+                            .append("jcr:content/")
+                            .append(prop.getName())
+                            .append('&')
+                            .append(propKey)
+                            .append(".value=")
+                            .append(prop.getValue());
+                }
             }
         } else {
             sb.append(path).append("/jcr:content");
 
             char appendPropChar = '?';
-            for (Property prop : properties) {
-                sb.append(appendPropChar);
-                if (appendPropChar == '?') {
-                    appendPropChar = '&';
+            if (properties != null) {
+                for (Property prop : properties) {
+                    sb.append(appendPropChar);
+                    if (appendPropChar == '?') {
+                        appendPropChar = '&';
+                    }
+                    sb.append("jcr:content/")
+                            .append(prop.getName())
+                            .append('=')
+                            .append(prop.getValue());
                 }
-                sb.append("jcr:content/")
-                        .append(prop.getName())
-                        .append('=')
-                        .append(prop.getValue());
             }
         }
 
