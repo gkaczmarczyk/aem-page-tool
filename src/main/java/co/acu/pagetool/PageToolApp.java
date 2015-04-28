@@ -3,7 +3,6 @@ package co.acu.pagetool;
 import co.acu.pagetool.crx.CrxConnection;
 import co.acu.pagetool.crx.CrxConnectionFactory;
 import org.apache.commons.cli.*;
-import org.fusesource.jansi.AnsiConsole;
 
 import java.io.PrintWriter;
 
@@ -13,6 +12,7 @@ import java.io.PrintWriter;
 public class PageToolApp {
 
     static boolean verbose = false;
+    static boolean dryRun = false;
 
     public static void main(String[] args) {
         Options options = new Options();
@@ -27,6 +27,8 @@ public class PageToolApp {
                 .addOption("n", true, "The parent node of the nodes expected to be updated. Nodes updated will only be descendents of this provided node.")
                 .addOption("m", true, "The node to be updated must contain the specified property & its corresponding value (format property=value). Any number of matching properties can be used.")
                 .addOption("p", true, "The property name & value to be updated on the nodes (format is property=value). Any number of properties can be used.")
+                .addOption("d", true, "The property name & value to be deleted on the nodes (format is property=value). Any number of properties can be used.")
+                .addOption("y", false, "Perform a dry-run of the command. This will perform all get functions, but will not execute update or delete operations.")
                 .addOption("x", false, "Output more verbosely");
 
         CommandLineParser parser = new GnuParser();
@@ -41,12 +43,15 @@ public class PageToolApp {
                 System.out.println("Parent node (-n) is a required argument.");
                 return;
             }
-            if (!cmd.hasOption('p')) {
-                System.out.println("Property (-p) is a required argument.");
+            if (!cmd.hasOption('p') && !cmd.hasOption('d')) {
+                System.out.println("Property to update or delete (-p or -d) is a required argument.");
                 return;
             }
             if (cmd.hasOption('x')) {
                 PageToolApp.verbose = true;
+            }
+            if (cmd.hasOption('y')) {
+                PageToolApp.dryRun = true;
             }
 
             CrxConnection conn = CrxConnectionFactory.getCrxConnection(cmd);
@@ -57,7 +62,12 @@ public class PageToolApp {
             if (cmd.hasOption('m')) {
                 nodeTool.setMatchingProperties(cmd.getOptionValues('m'));
             }
-            nodeTool.setUpdateProperties(cmd.getOptionValues('p'));
+            if (cmd.hasOption('p')) {
+                nodeTool.setUpdateProperties(cmd.getOptionValues('p'));
+            }
+            if (cmd.hasOption('d')) {
+                nodeTool.setDeleteProperties(cmd.getOptionValues('d'));
+            }
             nodeTool.run();
         } catch (Exception e) {
             System.out.println("Error parsing options (" + e.toString() + ")");

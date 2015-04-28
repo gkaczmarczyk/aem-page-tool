@@ -185,7 +185,7 @@ public class SlingClient {
      * @param properties A list of properties that will be updated and/or added to the page
      * @throws IOException
      */
-    public void runUpdate(String path, ArrayList<Property> properties) throws IOException {
+    public void runUpdate(String path, ArrayList<Property> properties, ArrayList<String> deleteProperties) throws IOException {
         HttpHost target = new HttpHost(conn.getHostname(), Integer.parseInt(conn.getPort()), SCHEME);
         CredentialsProvider credsProvider = new BasicCredentialsProvider();
         credsProvider.setCredentials(
@@ -202,9 +202,15 @@ public class SlingClient {
 
             HttpPost httpPost = new HttpPost(buildUrl(false, path, properties));
             List<NameValuePair> nvps = new ArrayList<NameValuePair>();
-            nvps.add(new BasicNameValuePair("_generic_prop", "new degree type"));
-            for (Property prop : properties) {
-                nvps.add(new BasicNameValuePair(prop.getName(), prop.getValue()));
+            if (deleteProperties != null) {
+                for (String prop : deleteProperties) {
+                    nvps.add(new BasicNameValuePair(prop + "@Delete", "delete-this"));
+                }
+            }
+            if (properties != null) {
+                for (Property prop : properties) {
+                    nvps.add(new BasicNameValuePair(prop.getName(), prop.getValue()));
+                }
             }
             httpPost.setEntity(new UrlEncodedFormEntity(nvps));
             CloseableHttpResponse response2 = httpclient.execute(httpPost, localContext);
