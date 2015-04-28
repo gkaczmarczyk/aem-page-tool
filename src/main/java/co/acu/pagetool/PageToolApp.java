@@ -3,6 +3,7 @@ package co.acu.pagetool;
 import co.acu.pagetool.crx.CrxConnection;
 import co.acu.pagetool.crx.CrxConnectionFactory;
 import org.apache.commons.cli.*;
+import org.fusesource.jansi.AnsiConsole;
 
 import java.io.PrintWriter;
 
@@ -10,6 +11,8 @@ import java.io.PrintWriter;
  * Node Tool allows updating JCR properties en masse easily.
  */
 public class PageToolApp {
+
+    static boolean verbose = false;
 
     public static void main(String[] args) {
         Options options = new Options();
@@ -23,7 +26,8 @@ public class PageToolApp {
                 .addOption("c", true, "Credentials: A shorthand combination of username, password, hostname, & port (format is admin:admin@localhost:4502)")
                 .addOption("n", true, "The parent node of the nodes expected to be updated. Nodes updated will only be descendents of this provided node.")
                 .addOption("m", true, "The node to be updated must contain the specified property & its corresponding value (format property=value). Any number of matching properties can be used.")
-                .addOption("p", true, "The property name & value to be updated on the nodes (format is property=value). Any number of properties can be used.");
+                .addOption("p", true, "The property name & value to be updated on the nodes (format is property=value). Any number of properties can be used.")
+                .addOption("x", false, "Output more verbosely");
 
         CommandLineParser parser = new GnuParser();
         try {
@@ -41,6 +45,9 @@ public class PageToolApp {
                 System.out.println("Property (-p) is a required argument.");
                 return;
             }
+            if (cmd.hasOption('x')) {
+                PageToolApp.verbose = true;
+            }
 
             CrxConnection conn = CrxConnectionFactory.getCrxConnection(cmd);
 
@@ -54,7 +61,9 @@ public class PageToolApp {
             nodeTool.run();
         } catch (Exception e) {
             System.out.println("Error parsing options (" + e.toString() + ")");
-            e.printStackTrace();
+            if (PageToolApp.verbose) {
+                e.printStackTrace();
+            }
         }
 
     }

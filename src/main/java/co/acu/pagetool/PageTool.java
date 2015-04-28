@@ -2,6 +2,7 @@ package co.acu.pagetool;
 
 import co.acu.pagetool.crx.CrxConnection;
 import co.acu.pagetool.crx.SlingClient;
+import co.acu.pagetool.exception.InvalidPropertyException;
 import co.acu.pagetool.result.ResultPage;
 import co.acu.pagetool.result.ResultSet;
 import co.acu.pagetool.crx.Property;
@@ -84,14 +85,18 @@ public class PageTool {
      * @param propertiesStr The properties given are expected to be in the format <code>property=value</code>
      * @return ArrayList of Property objects
      */
-    private ArrayList<Property> getPropertiesAsList(String[] propertiesStr) {
+    private ArrayList<Property> getPropertiesAsList(String[] propertiesStr) throws InvalidPropertyException {
         ArrayList<Property> propertiesList = new ArrayList<Property>();
 
-        for (String prop : propertiesStr) {
-            String[] keyVal = prop.split("=");
-            if (keyVal.length == 2) {
-                propertiesList.add(new Property(keyVal[0], keyVal[1]));
+        for (String propStr : propertiesStr) {
+            Property property = Property.getProperty(propStr);
+            if (property == null) {
+                throw new InvalidPropertyException("Property is in an invalid format. (property: " + propStr + ")");
             }
+            if (PageToolApp.verbose) {
+                System.out.println("    " + property.getName() + " = " + property.getValue());
+            }
+            propertiesList.add(property);
         }
 
         return propertiesList;
@@ -121,7 +126,10 @@ public class PageTool {
         this.matchingProperties = matchingProperties;
     }
 
-    public void setMatchingProperties(String[] properties) {
+    public void setMatchingProperties(String[] properties) throws InvalidPropertyException {
+        if (PageToolApp.verbose) {
+            System.out.println("  Properties to match:");
+        }
         this.matchingProperties = getPropertiesAsList(properties);
     }
 
@@ -133,7 +141,10 @@ public class PageTool {
         this.updateProperties = updateProperties;
     }
 
-    public void setUpdateProperties(String[] properties) {
+    public void setUpdateProperties(String[] properties) throws InvalidPropertyException {
+        if (PageToolApp.verbose) {
+            System.out.println("  Properties to update:");
+        }
         this.updateProperties = getPropertiesAsList(properties);
     }
 

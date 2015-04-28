@@ -9,6 +9,16 @@ public class Property {
     private String name;
     private String value;
 
+    public static Property getProperty(String keyVal) {
+        Property property = null;
+        String[] keyValArr = keyVal.split("=");
+        if (keyValArr.length == 2) {
+            property = new Property(keyValArr[0], keyValArr[1]);
+        }
+
+        return property;
+    }
+
     public Property() {
     }
 
