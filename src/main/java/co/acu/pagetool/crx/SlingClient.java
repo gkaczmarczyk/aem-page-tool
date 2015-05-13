@@ -113,20 +113,6 @@ public class SlingClient {
             }
         } else {
             sb.append(path).append("/jcr:content");
-
-            char appendPropChar = '?';
-            if (properties != null) {
-                for (Property prop : properties) {
-                    sb.append(appendPropChar);
-                    if (appendPropChar == '?') {
-                        appendPropChar = '&';
-                    }
-                    sb.append("jcr:content/")
-                            .append(prop.getName())
-                            .append('=')
-                            .append(prop.getValue());
-                }
-            }
         }
 
         return sb.toString();
@@ -209,18 +195,27 @@ public class SlingClient {
             }
             if (properties != null) {
                 for (Property prop : properties) {
-                    nvps.add(new BasicNameValuePair(prop.getName(), prop.getValue()));
+                    if (prop.isMulti()) {
+                        String[] values = prop.getValues();
+                        nvps.add(new BasicNameValuePair(prop.getName() + "@TypeHint", "String[]"));
+                        for (String value : values) {
+                            nvps.add(new BasicNameValuePair(prop.getName(), value));
+                        }
+                    } else {
+                        nvps.add(new BasicNameValuePair(prop.getName(), prop.getValue()));
+                    }
                 }
+
             }
             httpPost.setEntity(new UrlEncodedFormEntity(nvps));
             CloseableHttpResponse response2 = httpclient.execute(httpPost, localContext);
 
             try {
                 this.statusCode = response2.getStatusLine().getStatusCode();
-                HttpEntity entity2 = response2.getEntity();
+                HttpEntity entity = response2.getEntity();
 
                 // do something useful with the response body and ensure it is fully consumed
-                EntityUtils.consume(entity2);
+                EntityUtils.consume(entity);
             } finally {
                 response2.close();
             }
