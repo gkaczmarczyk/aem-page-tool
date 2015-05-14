@@ -11,6 +11,12 @@ Additionally, a single or set of properties are specified which are expected to 
 java -jar aem-page-tool.jar -n /content/path/to/my/page -p prop1=val1 -p prop2=val2
 ```
 
+You can also save multi-value properties. To do so, surround your property value with square brackets & comma separate the values if there are more than one. _(Currently only `String` multi-values are supported)_
+
+```
+java -jar aem-page-tool.jar -n /content/path/to/my/page -p prop1=[val1] -p prop2=[val2,val3]
+```
+
 Rather than updating properties, you can also delete properties that the page may contain.
 
 ```
