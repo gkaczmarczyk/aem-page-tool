@@ -166,23 +166,42 @@ public class SlingClient {
     }
 
     /**
+     * Get an instance of the HttpHost object
+     * @return
+     */
+    private HttpHost getHttpHost() {
+        return new HttpHost(conn.getHostname(), Integer.parseInt(conn.getPort()), SCHEME);
+    }
+
+    /**
+     * Get an instance of the ClosableHttpClient object
+     * @param httpHost
+     * @return
+     */
+    private CloseableHttpClient getHttpClient(HttpHost httpHost) {
+        CredentialsProvider credsProvider = new BasicCredentialsProvider();
+        credsProvider.setCredentials(
+                new AuthScope(httpHost.getHostName(), httpHost.getPort()),
+                new UsernamePasswordCredentials(conn.getUsername(), conn.getPassword()));
+
+        return HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
+    }
+
+    /**
      * Run a POST to the AEM Page at the given path updating it with the given properties
-     * @param path       The page that is expected to be updated
-     * @param properties A list of properties that will be updated and/or added to the page
+     * @param path             The page that is expected to be updated
+     * @param properties       A list of properties that will be updated and/or added to the page
+     * @param deleteProperties A list of properties that will be deleted from the page
      * @throws IOException
      */
     public void runUpdate(String path, ArrayList<Property> properties, ArrayList<String> deleteProperties) throws IOException {
-        HttpHost target = new HttpHost(conn.getHostname(), Integer.parseInt(conn.getPort()), SCHEME);
-        CredentialsProvider credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(
-                new AuthScope(target.getHostName(), target.getPort()),
-                new UsernamePasswordCredentials(conn.getUsername(), conn.getPassword()));
-        CloseableHttpClient httpclient = HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
+        HttpHost httpHost = getHttpHost();
+        CloseableHttpClient httpclient = getHttpClient(httpHost);
 
         try {
             AuthCache authCache = new BasicAuthCache();
             BasicScheme basicAuth = new BasicScheme();
-            authCache.put(target, basicAuth);
+            authCache.put(httpHost, basicAuth);
             HttpClientContext localContext = HttpClientContext.create();
             localContext.setAuthCache(authCache);
 
@@ -222,6 +241,20 @@ public class SlingClient {
         } finally {
             httpclient.close();
         }
+    }
+
+    /**
+     * Run a POST to the AEM Page  at the given path copying the values of the specified properties to the specified
+     * specified target properties
+     * @param path     The page that is expected to be updated
+     * @param copyFrom A list of the properties that will have values copied
+     * @param copyTo   A list of the properties that will be updated or created with new, copied values
+     * @throws IOException
+     */
+    public void runCopy(String path, ArrayList<String> copyFrom, ArrayList<String> copyTo) throws IOException {
+        HttpHost target = getHttpHost();
+        CloseableHttpClient httpclient = getHttpClient(target);
+
     }
 
     /**

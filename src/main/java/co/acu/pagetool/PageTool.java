@@ -20,6 +20,8 @@ public class PageTool {
     private String parentNodePath;
     private ArrayList<Property> matchingProperties;
     private ArrayList<Property> updateProperties;
+    private ArrayList<String> copyFromProperties;
+    private ArrayList<String> copyToProperties;
     private ArrayList<String> deleteProperties;
 
     private SlingClient slingClient;
@@ -157,6 +159,41 @@ public class PageTool {
             System.out.println("  Properties to update:");
         }
         this.updateProperties = getPropertiesAsList(properties);
+    }
+
+    private ArrayList<String> setCopyProperties(String[] properties) {
+        ArrayList<String> copyPropertiesList = new ArrayList<String>();
+
+        for (String prop : properties) {
+            if (PageToolApp.verbose) {
+                System.out.println("    " + prop);
+            }
+            copyPropertiesList.add(prop);
+        }
+
+        return copyPropertiesList;
+    }
+
+    public ArrayList<String> getCopyFromProperties() {
+        return copyFromProperties;
+    }
+
+    public void setCopyFromProperties(String[] copyFromProperties) {
+        if (PageToolApp.verbose) {
+            System.out.println("  Properties to copy from:");
+        }
+        this.copyFromProperties = setCopyProperties(copyFromProperties);
+    }
+
+    public ArrayList<String> getCopyToProperties() {
+        return copyToProperties;
+    }
+
+    public void setCopyToProperties(String[] copyToProperties) {
+        if (PageToolApp.verbose) {
+            System.out.println("  Properties to copy to:");
+        }
+        this.copyToProperties = setCopyProperties(copyToProperties);
     }
 
     public ArrayList<String> getDeleteProperties() {
