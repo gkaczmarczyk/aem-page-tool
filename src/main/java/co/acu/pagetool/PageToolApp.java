@@ -13,6 +13,7 @@ public class PageToolApp {
 
     static boolean verbose = false;
     static boolean dryRun = false;
+    static boolean modified = false;
 
     public static void main(String[] args) {
         Options options = new Options();
@@ -26,6 +27,7 @@ public class PageToolApp {
                 .addOption("c", true, "Credentials: A shorthand combination of username, password, hostname, & port (format is admin:admin@localhost:4502)")
                 .addOption("n", true, "The parent node of the nodes expected to be updated. Nodes updated will only be descendents of this provided node.")
                 .addOption("m", true, "The node to be updated must contain the specified property & its corresponding value (format property=value). Any number of matching properties can be used.")
+                .addOption("M", "modified", false, "Enable updating the modified property's timestamp and the modifiedBy property with the specified authentication user.")
                 .addOption("p", true, "The property name & value to be updated on the nodes (format is property=value). Any number of properties can be used.")
                 .addOption("d", true, "The property name & value to be deleted on the nodes (format is property=value). Any number of properties can be used.")
                 .addOption("y", false, "Perform a dry-run of the command. This will perform all get functions, but will not execute update or delete operations.")
@@ -52,6 +54,9 @@ public class PageToolApp {
             }
             if (cmd.hasOption('y')) {
                 PageToolApp.dryRun = true;
+            }
+            if (cmd.hasOption('M')) {
+                PageToolApp.modified = true;
             }
 
             CrxConnection conn = CrxConnectionFactory.getCrxConnection(cmd);

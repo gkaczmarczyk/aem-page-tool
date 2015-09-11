@@ -88,6 +88,7 @@ public class PageTool {
      */
     public void run() {
         slingClient = new SlingClient(this.connection);
+        slingClient.enableModifiedUpdate(PageToolApp.modified);
         runProcess();
     }
 
