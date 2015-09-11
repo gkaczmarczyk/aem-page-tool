@@ -22,7 +22,10 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 /**
@@ -53,6 +56,11 @@ public class SlingClient {
      * The node properties to output in the JSON response
      */
     String hitsProperties = "jcr:path";
+
+    /**
+     * Flag to determine whether or not the node should have the modified property updated with current timestamp
+     */
+    boolean updateModified = false;
 
     CrxConnection conn;
     Property nodeType;
@@ -207,6 +215,12 @@ public class SlingClient {
                 }
 
             }
+            if (updateModified) {
+                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SZ");
+                Calendar cal = Calendar.getInstance();
+                nvps.add(new BasicNameValuePair("cq:lastModified", dateFormat.format(cal.getTime())));
+                nvps.add(new BasicNameValuePair("cq:lastModifiedBy", conn.getUsername()));
+            }
             httpPost.setEntity(new UrlEncodedFormEntity(nvps));
             CloseableHttpResponse response2 = httpclient.execute(httpPost, localContext);
 
@@ -238,6 +252,10 @@ public class SlingClient {
      */
     public String getResponseText() {
         return this.responseText;
+    }
+
+    public void enableModifiedUpdate(boolean enable) {
+        this.updateModified = enable;
     }
 
 }
