@@ -34,6 +34,10 @@ java -jar aem-page-tool.jar -n /content/path/to/my/page -p prop1=val1 -m hasProp
 
 So, only a page(s) that has the property `hasProp` with the value `currVal` will get updated.
 
+#####Modified Property
+
+You can update the modified property with the current timestamp & the modifiedBy property with the username specified by the authentication credentials with the `-M` or `--modified` option.
+
 #####Passing credentials
 
 Credentials can be specified in any manner depending on your needs with any of the following options:
