@@ -216,10 +216,10 @@ public class SlingClient {
 
             }
             if (updateModified) {
-                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SZ");
                 Calendar cal = Calendar.getInstance();
-                nvps.add(new BasicNameValuePair("modified", dateFormat.format(cal.getTime())));
-                nvps.add(new BasicNameValuePair("modifiedBy", conn.getUsername()));
+                nvps.add(new BasicNameValuePair("cq:lastModified", dateFormat.format(cal.getTime())));
+                nvps.add(new BasicNameValuePair("cq:lastModifiedBy", conn.getUsername()));
             }
             httpPost.setEntity(new UrlEncodedFormEntity(nvps));
             CloseableHttpResponse response2 = httpclient.execute(httpPost, localContext);
