@@ -55,7 +55,12 @@ public class PageTool {
                     if (!PageToolApp.dryRun) {
                         System.out.print(" ...");
                         try {
-                            slingClient.runUpdate(page.getJcrPath(), updateProperties, deleteProperties);
+                            // we're making copying properties take precedence to updates or deletes
+                            if (copyFromProperties.size() > 0 && copyFromProperties.size() == copyToProperties.size()) {
+                                slingClient.runCopy(page.getJcrPath(), copyFromProperties, copyToProperties);
+                            } else {
+                                slingClient.runUpdate(page.getJcrPath(), updateProperties, deleteProperties);
+                            }
                             if (slingClient.getStatusCode() == 200) {
                                 nodesUpdated++;
                                 System.out.println("OK");

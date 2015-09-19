@@ -71,6 +71,9 @@ public class PageToolApp {
             if (cmd.hasOption('i')) {
                 nodeTool.setCopyFromProperties(cmd.getOptionValues('i'));
             }
+            if (cmd.hasOption('o')) {
+                nodeTool.setCopyToProperties(cmd.getOptionValues('o'));
+            }
             if (cmd.hasOption('p')) {
                 nodeTool.setUpdateProperties(cmd.getOptionValues('p'));
             }

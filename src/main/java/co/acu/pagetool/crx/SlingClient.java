@@ -20,6 +20,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.apache.sling.servlets.post.SlingPostConstants;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -65,10 +66,18 @@ public class SlingClient {
     }
 
     private String buildUrl(String path, ArrayList<Property> properties) {
-        return buildUrl(true, path, properties);
+        return buildUrl(true, path, properties, null);
     }
 
     private String buildUrl(boolean isQuery, String path, ArrayList<Property> properties) {
+        return buildUrl(isQuery, path, properties, null);
+    }
+
+    private String buildUrl(String path, String copyProperty) {
+        return buildUrl(false, path, null, copyProperty);
+    }
+
+    private String buildUrl(boolean isQuery, String path, ArrayList<Property> properties, String copyProperty) {
         StringBuilder sb = new StringBuilder();
 
         sb.append(SCHEME)
@@ -113,6 +122,10 @@ public class SlingClient {
             }
         } else {
             sb.append(path).append("/jcr:content");
+
+            if (copyProperty != null && !copyProperty.equals("")) {
+                sb.append("/").append(copyProperty);
+            }
         }
 
         return sb.toString();
@@ -255,6 +268,41 @@ public class SlingClient {
         HttpHost target = getHttpHost();
         CloseableHttpClient httpclient = getHttpClient(target);
 
+        try {
+            AuthCache authCache = new BasicAuthCache();
+            BasicScheme basicAuth = new BasicScheme();
+            authCache.put(target, basicAuth);
+            HttpClientContext localContext = HttpClientContext.create();
+            localContext.setAuthCache(authCache);
+
+            CloseableHttpResponse response = null;
+            for (int i = 0; i < copyFrom.size(); i++) {
+                String from = copyFrom.get(i);
+                String to = copyTo.get(i);
+                if (to == null) {
+                    break;
+                }
+                HttpPost httpPost = new HttpPost(buildUrl(path, ""));
+                List<NameValuePair> nvps = new ArrayList<NameValuePair>();
+                nvps.add(new BasicNameValuePair(to + SlingPostConstants.SUFFIX_COPY_FROM, from));
+                httpPost.setEntity(new UrlEncodedFormEntity(nvps));
+                response = httpclient.execute(httpPost, localContext);
+            }
+
+            if (response != null) {
+                try {
+                    this.statusCode = response.getStatusLine().getStatusCode();
+                    HttpEntity entity = response.getEntity();
+
+                    // do something useful with the response body and ensure it is fully consumed
+                    EntityUtils.consume(entity);
+                } finally {
+                    response.close();
+                }
+            }
+        } finally {
+            httpclient.close();
+        }
     }
 
     /**
