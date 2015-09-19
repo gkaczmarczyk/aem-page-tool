@@ -27,8 +27,9 @@ public class PageToolApp {
                 .addOption("n", true, "The parent node of the nodes expected to be updated. Nodes updated will only be descendents of this provided node.")
                 .addOption("m", true, "The node to be updated must contain the specified property & its corresponding value (format property=value). Any number of matching properties can be used.")
                 .addOption("p", true, "The property name & value to be updated on the nodes (format is property=value). Any number of properties can be used.")
-                .addOption("i", true, "Copy Values: The property name from which a value should be copied (Must be used with -o option)")
-                .addOption("o", true, "Copy Values: The property name to which the value should be copied (Must be used with -i option)")
+                .addOption("i", "copy-from", true, "Copy Values: The property name from which a value should be copied (Must be used with -o option)")
+                .addOption("o", "copy-to", true, "Copy Values: The property name to which the value should be copied (Must be used with -i option)")
+                .addOption("P", "property", false, "Copy Values: Specify the 'copy from' path is a node property, not a node name")
                 .addOption("d", true, "The property name & value to be deleted on the nodes (format is property=value). Any number of properties can be used.")
                 .addOption("y", false, "Perform a dry-run of the command. This will perform all get functions, but will not execute update or delete operations.")
                 .addOption("x", false, "Output more verbosely");
@@ -74,6 +75,7 @@ public class PageToolApp {
             if (cmd.hasOption('o')) {
                 nodeTool.setCopyToProperties(cmd.getOptionValues('o'));
             }
+            nodeTool.setIsPropertyPath(cmd.hasOption('P'));
             if (cmd.hasOption('p')) {
                 nodeTool.setUpdateProperties(cmd.getOptionValues('p'));
             }

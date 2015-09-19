@@ -23,6 +23,7 @@ public class PageTool {
     private ArrayList<String> copyFromProperties;
     private ArrayList<String> copyToProperties;
     private ArrayList<String> deleteProperties;
+    private boolean isPropertyPath;
 
     private SlingClient slingClient;
     private int nodesUpdated = 0;
@@ -56,8 +57,20 @@ public class PageTool {
                         System.out.print(" ...");
                         try {
                             // we're making copying properties take precedence to updates or deletes
-                            if (copyFromProperties.size() > 0 && copyFromProperties.size() == copyToProperties.size()) {
-                                slingClient.runCopy(page.getJcrPath(), copyFromProperties, copyToProperties);
+                            if (copyFromProperties != null && copyFromProperties.size() > 0 && copyFromProperties.size() == copyToProperties.size()) {
+                                if (isPropertyPath) {
+                                    String propertyValue = slingClient.getPropertyValue(page.getJcrPath(), copyFromProperties.get(0));
+                                    if (propertyValue == null) {
+                                        System.out.println("NOT OK");
+                                        continue;
+                                    }
+                                    Property property = new Property(copyToProperties.get(0), propertyValue);
+                                    ArrayList<Property> propertyList = new ArrayList<Property>();
+                                    propertyList.add(property);
+                                    slingClient.runUpdate(page.getJcrPath(), propertyList, null);
+                                } else {
+                                    slingClient.runCopy(page.getJcrPath(), copyFromProperties, copyToProperties);
+                                }
                             } else {
                                 slingClient.runUpdate(page.getJcrPath(), updateProperties, deleteProperties);
                             }
@@ -222,6 +235,14 @@ public class PageTool {
             }
             this.deleteProperties.add(prop);
         }
+    }
+
+    public boolean isPropertyPath() {
+        return isPropertyPath;
+    }
+
+    public void setIsPropertyPath(boolean isPropertyPath) {
+        this.isPropertyPath = isPropertyPath;
     }
 
 }

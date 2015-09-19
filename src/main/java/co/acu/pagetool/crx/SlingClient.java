@@ -1,5 +1,7 @@
 package co.acu.pagetool.crx;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.NameValuePair;
@@ -132,32 +134,49 @@ public class SlingClient {
     }
 
     /**
+     * Get an instance of the HttpHost object
+     * @return
+     */
+    private HttpHost getHttpHost() {
+        return new HttpHost(conn.getHostname(), Integer.parseInt(conn.getPort()), SCHEME);
+    }
+
+    /**
+     * Get an instance of the ClosableHttpClient object
+     * @param httpHost
+     * @return
+     */
+    private CloseableHttpClient getHttpClient(HttpHost httpHost) {
+        CredentialsProvider credsProvider = new BasicCredentialsProvider();
+        credsProvider.setCredentials(
+                new AuthScope(httpHost.getHostName(), httpHost.getPort()),
+                new UsernamePasswordCredentials(conn.getUsername(), conn.getPassword()));
+
+        return HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
+    }
+
+    /**
      * Run a query to search for all Pages under the given path which match the specified properties
      * @param path       An existing path under which AEM Pages are being searched
      * @param properties A list of properties which a page is expected to contain
      * @throws IOException
      */
     public void runRead(String path, ArrayList<Property> properties) throws IOException {
-        HttpHost target = new HttpHost(conn.getHostname(), Integer.parseInt(conn.getPort()), SCHEME);
-        CredentialsProvider credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(
-                new AuthScope(target.getHostName(), target.getPort()),
-                new UsernamePasswordCredentials(conn.getUsername(), conn.getPassword()));
-        CloseableHttpClient httpclient = HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
+        HttpHost httpHost = getHttpHost();
+        CloseableHttpClient httpclient = getHttpClient(httpHost);
 
         try {
             AuthCache authCache = new BasicAuthCache();
             BasicScheme basicAuth = new BasicScheme();
-            authCache.put(target, basicAuth);
+            authCache.put(httpHost, basicAuth);
             HttpClientContext localContext = HttpClientContext.create();
             localContext.setAuthCache(authCache);
 
             HttpGet httpget = new HttpGet(buildUrl(path, properties));
 
-//            System.out.println("Executing request " + httpget.getRequestLine() + " to target " + target);
             CloseableHttpResponse response;
             try {
-                response = httpclient.execute(target, httpget, localContext);
+                response = httpclient.execute(httpHost, httpget, localContext);
             } catch (Exception e) {
                 System.out.println("There has been an error connecting to AEM. (" + e.toString() + ")");
                 httpclient.close();
@@ -179,25 +198,61 @@ public class SlingClient {
     }
 
     /**
-     * Get an instance of the HttpHost object
-     * @return
+     * Get the value of the property from its given parent path
+     * @param path         The node path
+     * @param propertyName The name of the property. This could include subnodes within a node's jcr:content node.
+     * @return The value of the given property or null if not found or if it could not be accessed fro whatever reason
+     * @throws IOException
      */
-    private HttpHost getHttpHost() {
-        return new HttpHost(conn.getHostname(), Integer.parseInt(conn.getPort()), SCHEME);
-    }
+    public String getPropertyValue(String path, String propertyName) throws IOException {
+        String value = null;
+        HttpHost httpHost = getHttpHost();
+        CloseableHttpClient httpclient = getHttpClient(httpHost);
 
-    /**
-     * Get an instance of the ClosableHttpClient object
-     * @param httpHost
-     * @return
-     */
-    private CloseableHttpClient getHttpClient(HttpHost httpHost) {
-        CredentialsProvider credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(
-                new AuthScope(httpHost.getHostName(), httpHost.getPort()),
-                new UsernamePasswordCredentials(conn.getUsername(), conn.getPassword()));
+        try {
+            AuthCache authCache = new BasicAuthCache();
+            BasicScheme basicAuth = new BasicScheme();
+            authCache.put(httpHost, basicAuth);
+            HttpClientContext localContext = HttpClientContext.create();
+            localContext.setAuthCache(authCache);
 
-        return HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
+            String lastNode = "";
+            if (propertyName.contains("/")) {
+                lastNode = propertyName.substring(0, propertyName.lastIndexOf("/"));
+                propertyName = propertyName.substring(propertyName.lastIndexOf("/") + 1);
+            }
+
+            HttpGet httpget = new HttpGet(buildUrl(path, lastNode) + ".json");
+
+            CloseableHttpResponse response;
+            try {
+                response = httpclient.execute(httpHost, httpget, localContext);
+            } catch (Exception e) {
+                System.out.println("There has been an error connecting to AEM. (" + e.toString() + ")");
+                httpclient.close();
+                return value;
+            }
+            try {
+                StatusLine status = response.getStatusLine();
+                statusCode = status.getStatusCode();
+                if (statusCode != 200) {
+                    System.out.println("Error accessing requested URL. (status code = " + statusCode + ")");
+                }
+                responseText = EntityUtils.toString(response.getEntity());
+                try {
+                    JsonElement root = new JsonParser().parse(responseText);
+                    value = root.getAsJsonObject().get(propertyName).getAsString();
+                } catch (Exception e) {
+                    System.out.print(" (" + e.toString() + ") ");
+                }
+            } finally {
+                response.close();
+            }
+        } finally {
+            httpclient.close();
+        }
+
+        return value;
     }
 
     /**
@@ -222,14 +277,14 @@ public class SlingClient {
             List<NameValuePair> nvps = new ArrayList<NameValuePair>();
             if (deleteProperties != null) {
                 for (String prop : deleteProperties) {
-                    nvps.add(new BasicNameValuePair(prop + "@Delete", "delete-this"));
+                    nvps.add(new BasicNameValuePair(prop + SlingPostConstants.SUFFIX_DELETE, "delete-this"));
                 }
             }
             if (properties != null) {
                 for (Property prop : properties) {
                     if (prop.isMulti()) {
                         String[] values = prop.getValues();
-                        nvps.add(new BasicNameValuePair(prop.getName() + "@TypeHint", "String[]"));
+                        nvps.add(new BasicNameValuePair(prop.getName() + SlingPostConstants.TYPE_HINT_SUFFIX, "String[]"));
                         for (String value : values) {
                             nvps.add(new BasicNameValuePair(prop.getName(), value));
                         }
@@ -257,8 +312,8 @@ public class SlingClient {
     }
 
     /**
-     * Run a POST to the AEM Page  at the given path copying the values of the specified properties to the specified
-     * specified target properties
+     * Run a POST to the AEM Page  at the given path copying the values of the specified node to the specified
+     * specified target node
      * @param path     The page that is expected to be updated
      * @param copyFrom A list of the properties that will have values copied
      * @param copyTo   A list of the properties that will be updated or created with new, copied values
