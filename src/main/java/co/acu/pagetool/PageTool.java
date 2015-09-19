@@ -20,7 +20,10 @@ public class PageTool {
     private String parentNodePath;
     private ArrayList<Property> matchingProperties;
     private ArrayList<Property> updateProperties;
+    private ArrayList<String> copyFromProperties;
+    private ArrayList<String> copyToProperties;
     private ArrayList<String> deleteProperties;
+    private boolean isPropertyPath;
 
     private SlingClient slingClient;
     private int nodesUpdated = 0;
@@ -53,7 +56,24 @@ public class PageTool {
                     if (!PageToolApp.dryRun) {
                         System.out.print(" ...");
                         try {
-                            slingClient.runUpdate(page.getJcrPath(), updateProperties, deleteProperties);
+                            // we're making copying properties take precedence to updates or deletes
+                            if (copyFromProperties != null && copyFromProperties.size() > 0 && copyFromProperties.size() == copyToProperties.size()) {
+                                if (isPropertyPath) {
+                                    String propertyValue = slingClient.getPropertyValue(page.getJcrPath(), copyFromProperties.get(0));
+                                    if (propertyValue == null) {
+                                        System.out.println("NOT OK");
+                                        continue;
+                                    }
+                                    Property property = new Property(copyToProperties.get(0), propertyValue);
+                                    ArrayList<Property> propertyList = new ArrayList<Property>();
+                                    propertyList.add(property);
+                                    slingClient.runUpdate(page.getJcrPath(), propertyList, null);
+                                } else {
+                                    slingClient.runCopy(page.getJcrPath(), copyFromProperties, copyToProperties);
+                                }
+                            } else {
+                                slingClient.runUpdate(page.getJcrPath(), updateProperties, deleteProperties);
+                            }
                             if (slingClient.getStatusCode() == 200) {
                                 nodesUpdated++;
                                 System.out.println("OK");
@@ -159,6 +179,41 @@ public class PageTool {
         this.updateProperties = getPropertiesAsList(properties);
     }
 
+    private ArrayList<String> setCopyProperties(String[] properties) {
+        ArrayList<String> copyPropertiesList = new ArrayList<String>();
+
+        for (String prop : properties) {
+            if (PageToolApp.verbose) {
+                System.out.println("    " + prop);
+            }
+            copyPropertiesList.add(prop);
+        }
+
+        return copyPropertiesList;
+    }
+
+    public ArrayList<String> getCopyFromProperties() {
+        return copyFromProperties;
+    }
+
+    public void setCopyFromProperties(String[] copyFromProperties) {
+        if (PageToolApp.verbose) {
+            System.out.println("  Properties to copy from:");
+        }
+        this.copyFromProperties = setCopyProperties(copyFromProperties);
+    }
+
+    public ArrayList<String> getCopyToProperties() {
+        return copyToProperties;
+    }
+
+    public void setCopyToProperties(String[] copyToProperties) {
+        if (PageToolApp.verbose) {
+            System.out.println("  Properties to copy to:");
+        }
+        this.copyToProperties = setCopyProperties(copyToProperties);
+    }
+
     public ArrayList<String> getDeleteProperties() {
         return deleteProperties;
     }
@@ -180,6 +235,14 @@ public class PageTool {
             }
             this.deleteProperties.add(prop);
         }
+    }
+
+    public boolean isPropertyPath() {
+        return isPropertyPath;
+    }
+
+    public void setIsPropertyPath(boolean isPropertyPath) {
+        this.isPropertyPath = isPropertyPath;
     }
 
 }
