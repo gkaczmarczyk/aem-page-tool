@@ -29,7 +29,7 @@ public class PageToolApp {
                 .addOption("p", true, "The property name & value to be updated on the nodes (format is property=value). Any number of properties can be used.")
                 .addOption("i", "copy-from", true, "Copy Values: The property name from which a value should be copied (Must be used with -o option)")
                 .addOption("o", "copy-to", true, "Copy Values: The property name to which the value should be copied (Must be used with -i option)")
-                .addOption("P", "property", false, "Copy Values: Specify the 'copy from' path is a node property, not a node name")
+                .addOption("P", "property", false, "Copy Values: Specify that the 'copy from' path is a node property, not a node name")
                 .addOption("d", true, "The property name & value to be deleted on the nodes (format is property=value). Any number of properties can be used.")
                 .addOption("y", false, "Perform a dry-run of the command. This will perform all get functions, but will not execute update or delete operations.")
                 .addOption("x", false, "Output more verbosely");
