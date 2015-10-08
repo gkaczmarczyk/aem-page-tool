@@ -61,13 +61,13 @@ _Note: At this time, only the first node specified will be copied regardless of 
 Copying properties is done similarly to copying nodes with the additional parameter `-P` (or `--property`). So, having a property, `prop1`, in the `jcr:content` node of the given page, you can copy the value of it to the newly specified property, `prop2` with the following command: 
 
 ```
-java -jar aem-page-tool.jar -n /content/path/to/my/page -i prop1 -o prop2
+java -jar aem-page-tool.jar -n /content/path/to/my/page -i prop1 -o prop2 -P
 ```
 
 More deeply nested properties can be copied using the same technique as specified previously:
 
 ```
-java -jar aem-page-tool.jar -n /content/path/to/my/page -i par/subpar/prop1 -o par/subpar/prop2
+java -jar aem-page-tool.jar -n /content/path/to/my/page -i par/subpar/prop1 -o par/subpar/prop2 -P
 ```
 
 #####Passing credentials
