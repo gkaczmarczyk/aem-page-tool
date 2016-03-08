@@ -23,6 +23,7 @@ public class PageTool {
     private ArrayList<String> copyFromProperties;
     private ArrayList<String> copyToProperties;
     private ArrayList<String> deleteProperties;
+    private boolean searchOnly = false;
     private boolean isPropertyPath;
 
     private SlingClient slingClient;
@@ -49,9 +50,15 @@ public class PageTool {
                 Gson gson = new Gson();
                 ResultSet results = gson.fromJson(slingClient.getResponseText(), ResultSet.class);
                 System.out.print("Found " + results.getTotal() + " page" + (results.getTotal() == 1 ? "" : "s") + ". ");
-                System.out.println((!PageToolApp.dryRun) ? "Updating pages now..." : "Pages to be updated:");
+                if (!searchOnly) {
+                    System.out.println((!PageToolApp.dryRun) ? "Updating pages now..." : "Pages to be updated:");
+                }
 
                 for (ResultPage page : results.getHits()) {
+                    if (searchOnly) {
+                        System.out.println("    " + page.getJcrPath());
+                        continue;
+                    }
                     System.out.print((!PageToolApp.dryRun ? "Updating " : "    ") + page.getJcrPath());
                     if (!PageToolApp.dryRun) {
                         System.out.print(" ...");
@@ -88,8 +95,10 @@ public class PageTool {
                     }
                 }
 
-                System.out.println("");
-                System.out.println(nodesUpdated + " node" + (nodesUpdated == 1 ? "" : "s") + " ha" + (nodesUpdated == 1 ? "s" : "ve") + " been updated.");
+                if (!searchOnly) {
+                    System.out.println("");
+                    System.out.println(nodesUpdated + " node" + (nodesUpdated == 1 ? "" : "s") + " ha" + (nodesUpdated == 1 ? "s" : "ve") + " been updated.");
+                }
             } else {
                 if (slingClient.getStatusCode() < 0) {
                     System.out.println("Server appears disconnected. No changes made.");
@@ -162,6 +171,19 @@ public class PageTool {
             System.out.println("  Properties to match:");
         }
         this.matchingProperties = getPropertiesAsList(properties);
+    }
+
+    public void setSearchValue(String[] searchValues) {
+        if (searchValues == null || searchValues.length < 1) {
+            return;
+        }
+
+        this.searchOnly = true;
+        try {
+            setMatchingProperties(searchValues);
+        } catch (InvalidPropertyException e) {
+            System.out.println("Error setting the search property (" + e.toString() + ").");
+        }
     }
 
     public ArrayList<Property> getUpdateProperties() {
