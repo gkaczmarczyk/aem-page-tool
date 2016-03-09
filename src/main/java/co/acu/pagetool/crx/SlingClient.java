@@ -1,5 +1,6 @@
 package co.acu.pagetool.crx;
 
+import co.acu.pagetool.OperationProperties;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.apache.http.HttpEntity;
@@ -40,10 +41,12 @@ public class SlingClient {
     QueryUrl queryUrl;
     int statusCode = -1;
     String responseText = null;
+    private OperationProperties properties;
 
-    public SlingClient(CrxConnection conn) {
+    public SlingClient(CrxConnection conn, OperationProperties properties) {
         this.conn = conn;
         this.queryUrl = new QueryUrl(conn);
+        this.properties = properties;
     }
 
     /**
@@ -87,16 +90,15 @@ public class SlingClient {
     /**
      * Run a query to search for all Pages under the given path which match the specified properties
      * @param path       An existing path under which AEM Pages are being searched
-     * @param properties A list of properties which a page is expected to contain
      * @throws IOException
      */
-    public void runRead(String path, ArrayList<Property> properties) throws IOException {
+    public void runRead(String path) throws IOException {
         HttpHost httpHost = getHttpHost();
         CloseableHttpClient httpClient = getHttpClient(httpHost);
 
         try {
             HttpClientContext clientContext = getClientContext(httpHost, httpClient);
-            HttpGet httpget = new HttpGet(queryUrl.buildUrl(path, properties));
+            HttpGet httpget = new HttpGet(queryUrl.buildUrl(path, properties.getMatchingProperties()));
 
             CloseableHttpResponse response;
             try {
@@ -178,26 +180,24 @@ public class SlingClient {
     /**
      * Run a POST to the AEM Page at the given path updating it with the given properties
      * @param path             The page that is expected to be updated
-     * @param properties       A list of properties that will be updated and/or added to the page
-     * @param deleteProperties A list of properties that will be deleted from the page
      * @throws IOException
      */
-    public void runUpdate(String path, ArrayList<Property> properties, ArrayList<String> deleteProperties) throws IOException {
+    public void runUpdate(String path) throws IOException {
         HttpHost httpHost = getHttpHost();
         CloseableHttpClient httpClient = getHttpClient(httpHost);
 
         try {
             HttpClientContext clientContext = getClientContext(httpHost, httpClient);
 
-            HttpPost httpPost = new HttpPost(queryUrl.buildUrl(false, path, properties));
+            HttpPost httpPost = new HttpPost(queryUrl.buildUrl(false, path, properties.getUpdateProperties()));
             List<NameValuePair> nvps = new ArrayList<NameValuePair>();
-            if (deleteProperties != null) {
-                for (String prop : deleteProperties) {
+            if (properties.getDeleteProperties() != null) {
+                for (String prop : properties.getDeleteProperties()) {
                     nvps.add(new BasicNameValuePair(prop + SlingPostConstants.SUFFIX_DELETE, "delete-this"));
                 }
             }
-            if (properties != null) {
-                for (Property prop : properties) {
+            if (properties.getUpdateProperties() != null) {
+                for (Property prop : properties.getUpdateProperties()) {
                     if (prop.isMulti()) {
                         String[] values = prop.getValues();
                         nvps.add(new BasicNameValuePair(prop.getName() + SlingPostConstants.TYPE_HINT_SUFFIX, "String[]"));
@@ -231,11 +231,9 @@ public class SlingClient {
      * Run a POST to the AEM Page  at the given path copying the values of the specified node to the specified
      * specified target node
      * @param path     The page that is expected to be updated
-     * @param copyFrom A list of the properties that will have values copied
-     * @param copyTo   A list of the properties that will be updated or created with new, copied values
      * @throws IOException
      */
-    public void runCopy(String path, ArrayList<String> copyFrom, ArrayList<String> copyTo) throws IOException {
+    public void runCopy(String path) throws IOException {
         HttpHost httpHost = getHttpHost();
         CloseableHttpClient httpClient = getHttpClient(httpHost);
 
@@ -243,9 +241,9 @@ public class SlingClient {
             HttpClientContext clientContext = getClientContext(httpHost, httpClient);
 
             CloseableHttpResponse response = null;
-            for (int i = 0; i < copyFrom.size(); i++) {
-                String from = copyFrom.get(i);
-                String to = copyTo.get(i);
+            for (int i = 0; i < properties.getCopyFromProperties().size(); i++) {
+                String from = properties.getCopyFromProperties().get(i);
+                String to = properties.getCopyToProperties().get(i);
                 if (to == null) {
                     break;
                 }
