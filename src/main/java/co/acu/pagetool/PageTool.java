@@ -18,13 +18,9 @@ public class PageTool {
 
     private CrxConnection connection;
     private String parentNodePath;
-    private ArrayList<Property> matchingProperties;
-    private ArrayList<Property> updateProperties;
-    private ArrayList<String> copyFromProperties;
-    private ArrayList<String> copyToProperties;
-    private ArrayList<String> deleteProperties;
     private boolean isPropertyPath;
 
+    private OperationProperties properties;
     private SlingClient slingClient;
     private int nodesUpdated = 0;
 
@@ -43,36 +39,45 @@ public class PageTool {
             System.out.println("Dry Run of update operation ...");
         }
         try {
-            slingClient.runRead(parentNodePath, matchingProperties);
+            slingClient.runRead(parentNodePath);
             System.out.println("");
             if (slingClient.getStatusCode() == 200) {
                 Gson gson = new Gson();
                 ResultSet results = gson.fromJson(slingClient.getResponseText(), ResultSet.class);
-                System.out.print("Found " + results.getTotal() + " page" + (results.getTotal() == 1 ? "" : "s") + ". ");
-                System.out.println((!PageToolApp.dryRun) ? "Updating pages now..." : "Pages to be updated:");
+                if (!properties.isSearchOnly()) {
+                    System.out.print("Found " + results.getTotal() + (properties.isNonCqPage() ? " node" : " page") + (results.getTotal() == 1 ? "" : "s") + ". ");
+                    System.out.println((!PageToolApp.dryRun) ? "Updating pages now..." : "Pages to be updated:");
+                }
 
                 for (ResultPage page : results.getHits()) {
+                    if (properties.isSearchOnly()) {
+                        System.out.println("    " + page.getJcrPath());
+                        continue;
+                    }
                     System.out.print((!PageToolApp.dryRun ? "Updating " : "    ") + page.getJcrPath());
                     if (!PageToolApp.dryRun) {
                         System.out.print(" ...");
                         try {
                             // we're making copying properties take precedence to updates or deletes
-                            if (copyFromProperties != null && copyFromProperties.size() > 0 && copyFromProperties.size() == copyToProperties.size()) {
+                            if (properties.getCopyFromProperties() != null && properties.getCopyFromProperties().size() > 0 && properties.getCopyFromProperties().size() == properties.getCopyToProperties().size()) {
                                 if (isPropertyPath) {
-                                    String propertyValue = slingClient.getPropertyValue(page.getJcrPath(), copyFromProperties.get(0));
-                                    if (propertyValue == null) {
+                                    String fromPropertyValue = slingClient.getPropertyValue(page.getJcrPath(), properties.getCopyFromProperties().get(0));
+                                    if (fromPropertyValue == null) {
                                         System.out.println("NOT OK");
                                         continue;
                                     }
-                                    Property property = new Property(copyToProperties.get(0), propertyValue);
-                                    ArrayList<Property> propertyList = new ArrayList<Property>();
-                                    propertyList.add(property);
-                                    slingClient.runUpdate(page.getJcrPath(), propertyList, null);
+                                    if (properties.getUpdateProperties().size() > 1) { // just make sure there's only one copy target
+                                        Property newProperty = new Property(properties.getCopyToProperties().get(0), fromPropertyValue);
+                                        ArrayList<Property> copyToList = new ArrayList<Property>();
+                                        copyToList.add(newProperty);
+                                        properties.setUpdateProperties(copyToList);
+                                    }
+                                    slingClient.runUpdate(page.getJcrPath());
                                 } else {
-                                    slingClient.runCopy(page.getJcrPath(), copyFromProperties, copyToProperties);
+                                    slingClient.runCopy(page.getJcrPath());
                                 }
                             } else {
-                                slingClient.runUpdate(page.getJcrPath(), updateProperties, deleteProperties);
+                                slingClient.runUpdate(page.getJcrPath());
                             }
                             if (slingClient.getStatusCode() == 200) {
                                 nodesUpdated++;
@@ -88,8 +93,12 @@ public class PageTool {
                     }
                 }
 
-                System.out.println("");
-                System.out.println(nodesUpdated + " node" + (nodesUpdated == 1 ? "" : "s") + " ha" + (nodesUpdated == 1 ? "s" : "ve") + " been updated.");
+                if (properties.isSearchOnly()) {
+                    System.out.print("\n  " + results.getTotal() + (properties.isNonCqPage() ? " node" : " page") + (results.getTotal() == 1 ? "" : "s") + " were found. ");
+                } else {
+                    System.out.println("");
+                    System.out.println(nodesUpdated + " node" + (nodesUpdated == 1 ? "" : "s") + " ha" + (nodesUpdated == 1 ? "s" : "ve") + " been updated.");
+                }
             } else {
                 if (slingClient.getStatusCode() < 0) {
                     System.out.println("Server appears disconnected. No changes made.");
@@ -107,30 +116,8 @@ public class PageTool {
      * Runs the CRX query
      */
     public void run() {
-        slingClient = new SlingClient(this.connection);
+        slingClient = new SlingClient(this.connection, properties);
         runProcess();
-    }
-
-    /**
-     * Convert the properties given as options in the command line into a list of <code>Property</code> objects
-     * @param propertiesStr The properties given are expected to be in the format <code>property=value</code>
-     * @return ArrayList of Property objects
-     */
-    private ArrayList<Property> getPropertiesAsList(String[] propertiesStr) throws InvalidPropertyException {
-        ArrayList<Property> propertiesList = new ArrayList<Property>();
-
-        for (String propStr : propertiesStr) {
-            Property property = Property.getProperty(propStr);
-            if (property == null) {
-                throw new InvalidPropertyException("Property is in an invalid format. (property: " + propStr + ")");
-            }
-            if (PageToolApp.verbose) {
-                System.out.println("    " + property.getName() + " = " + property.getValue());
-            }
-            propertiesList.add(property);
-        }
-
-        return propertiesList;
     }
 
     public String getParentNodePath() {
@@ -149,92 +136,8 @@ public class PageTool {
         this.connection = connection;
     }
 
-    public ArrayList<Property> getMatchingProperties() {
-        return matchingProperties;
-    }
-
-    public void setMatchingProperties(ArrayList<Property> matchingProperties) {
-        this.matchingProperties = matchingProperties;
-    }
-
-    public void setMatchingProperties(String[] properties) throws InvalidPropertyException {
-        if (PageToolApp.verbose) {
-            System.out.println("  Properties to match:");
-        }
-        this.matchingProperties = getPropertiesAsList(properties);
-    }
-
-    public ArrayList<Property> getUpdateProperties() {
-        return updateProperties;
-    }
-
-    public void setUpdateProperties(ArrayList<Property> updateProperties) {
-        this.updateProperties = updateProperties;
-    }
-
-    public void setUpdateProperties(String[] properties) throws InvalidPropertyException {
-        if (PageToolApp.verbose) {
-            System.out.println("  Properties to update:");
-        }
-        this.updateProperties = getPropertiesAsList(properties);
-    }
-
-    private ArrayList<String> setCopyProperties(String[] properties) {
-        ArrayList<String> copyPropertiesList = new ArrayList<String>();
-
-        for (String prop : properties) {
-            if (PageToolApp.verbose) {
-                System.out.println("    " + prop);
-            }
-            copyPropertiesList.add(prop);
-        }
-
-        return copyPropertiesList;
-    }
-
-    public ArrayList<String> getCopyFromProperties() {
-        return copyFromProperties;
-    }
-
-    public void setCopyFromProperties(String[] copyFromProperties) {
-        if (PageToolApp.verbose) {
-            System.out.println("  Properties to copy from:");
-        }
-        this.copyFromProperties = setCopyProperties(copyFromProperties);
-    }
-
-    public ArrayList<String> getCopyToProperties() {
-        return copyToProperties;
-    }
-
-    public void setCopyToProperties(String[] copyToProperties) {
-        if (PageToolApp.verbose) {
-            System.out.println("  Properties to copy to:");
-        }
-        this.copyToProperties = setCopyProperties(copyToProperties);
-    }
-
-    public ArrayList<String> getDeleteProperties() {
-        return deleteProperties;
-    }
-
-    public void setDeleteProperties(ArrayList<String> deleteProperties) {
-        this.deleteProperties = deleteProperties;
-    }
-
-    public void setDeleteProperties(String[] properties) throws InvalidPropertyException {
-        if (this.deleteProperties == null) {
-            this.deleteProperties = new ArrayList<String>();
-        }
-        if (PageToolApp.verbose) {
-            System.out.println("  Properties to delete:");
-        }
-        for (String prop : properties) {
-            if (PageToolApp.verbose) {
-                System.out.println("    " + prop);
-            }
-            this.deleteProperties.add(prop);
-        }
+    public void setProperties(OperationProperties properties) {
+        this.properties = properties;
     }
 
     public boolean isPropertyPath() {

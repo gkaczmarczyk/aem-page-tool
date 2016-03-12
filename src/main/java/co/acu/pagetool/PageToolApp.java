@@ -11,7 +11,7 @@ import java.io.PrintWriter;
  */
 public class PageToolApp {
 
-    static boolean verbose = false;
+    public static boolean verbose = false;
     static boolean dryRun = false;
 
     public static void main(String[] args) {
@@ -31,6 +31,8 @@ public class PageToolApp {
                 .addOption("o", "copy-to", true, "Copy Values: The property name to which the value should be copied (Must be used with -i option)")
                 .addOption("P", "property", false, "Copy Values: Specify that the 'copy from' path is a node property, not a node name")
                 .addOption("d", true, "The property name & value to be deleted on the nodes (format is property=value). Any number of properties can be used.")
+                .addOption("f", "find", true, "Search the JCR at the given node for any of the criteria (format is node_name or property_name=property_value where property designates searching for a property name and value designates searching for the value of a property).")
+                .addOption("N", "non-page", false, "This search will not default node types to 'cq:Page'")
                 .addOption("y", false, "Perform a dry-run of the command. This will perform all get functions, but will not execute update or delete operations.")
                 .addOption("x", false, "Output more verbosely");
 
@@ -50,7 +52,7 @@ public class PageToolApp {
                 System.out.println("A 'copy from' property (-i) must be specified together with a 'copy to' property (-o).");
                 return;
             }
-            if (!cmd.hasOption('p') && !cmd.hasOption('d') && !cmd.hasOption("i")) {
+            if (!cmd.hasOption('p') && !cmd.hasOption('d') && !cmd.hasOption("i") && !cmd.hasOption('f')) {
                 System.out.println("Property to update or delete (-p or -d) is a required argument.");
                 return;
             }
@@ -65,22 +67,30 @@ public class PageToolApp {
 
             PageTool nodeTool = new PageTool(cmd.getOptionValue('n'));
             nodeTool.setConnection(conn);
+            OperationProperties props = new OperationProperties();
+            nodeTool.setProperties(props);
 
+            if (cmd.hasOption('N')) {
+                props.setCqPageType(false);
+            }
             if (cmd.hasOption('m')) {
-                nodeTool.setMatchingProperties(cmd.getOptionValues('m'));
+                props.setMatchingProperties(cmd.getOptionValues('m'));
+            }
+            if (cmd.hasOption('f')) {
+                props.setSearchValue(cmd.getOptionValues('f'));
             }
             if (cmd.hasOption('i')) {
-                nodeTool.setCopyFromProperties(cmd.getOptionValues('i'));
+                props.setCopyFromProperties(cmd.getOptionValues('i'));
             }
             if (cmd.hasOption('o')) {
-                nodeTool.setCopyToProperties(cmd.getOptionValues('o'));
+                props.setCopyToProperties(cmd.getOptionValues('o'));
             }
             nodeTool.setIsPropertyPath(cmd.hasOption('P'));
             if (cmd.hasOption('p')) {
-                nodeTool.setUpdateProperties(cmd.getOptionValues('p'));
+                props.setUpdateProperties(cmd.getOptionValues('p'));
             }
             if (cmd.hasOption('d')) {
-                nodeTool.setDeleteProperties(cmd.getOptionValues('d'));
+                props.setDeleteProperties(cmd.getOptionValues('d'));
             }
             nodeTool.run();
         } catch (Exception e) {

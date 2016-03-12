@@ -1,5 +1,7 @@
 package co.acu.pagetool.crx;
 
+import co.acu.pagetool.OperationProperties;
+import co.acu.pagetool.PageToolApp;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.apache.http.HttpEntity;
@@ -34,103 +36,18 @@ import java.util.List;
  */
 public class SlingClient {
 
-    static final String SCHEME = "http";
-    static final String QUERY_PATH = "/bin/querybuilder.json";
-
-    /**
-     * The number of maximum results to display per request
-     */
-    int limit = 1000;
-
-    /**
-     * The hierarchical depth to search for nodes/Pages
-     */
-    int nodeDepth = 5;
-
-    /**
-     * The type of output from each node
-     */
-    String hitsType = "selective";
-
-    /**
-     * The node properties to output in the JSON response
-     */
-    String hitsProperties = "jcr:path";
+    public static final String SCHEME = "http";
 
     CrxConnection conn;
-    Property nodeType;
+    QueryUrl queryUrl;
     int statusCode = -1;
     String responseText = null;
+    private OperationProperties properties;
 
-    public SlingClient(CrxConnection conn) {
+    public SlingClient(CrxConnection conn, OperationProperties properties) {
         this.conn = conn;
-        nodeType = new Property("type", "cq:Page");
-    }
-
-    private String buildUrl(String path, ArrayList<Property> properties) {
-        return buildUrl(true, path, properties, null);
-    }
-
-    private String buildUrl(boolean isQuery, String path, ArrayList<Property> properties) {
-        return buildUrl(isQuery, path, properties, null);
-    }
-
-    private String buildUrl(String path, String copyProperty) {
-        return buildUrl(false, path, null, copyProperty);
-    }
-
-    private String buildUrl(boolean isQuery, String path, ArrayList<Property> properties, String copyProperty) {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(SCHEME)
-                .append("://")
-                .append(conn.getHostname())
-                .append(':')
-                .append(conn.getPort());
-
-        if (isQuery) {
-            sb.append(QUERY_PATH)
-                    .append('?')
-                    .append(nodeType.getName())
-                    .append('=')
-                    .append(nodeType.getValue())
-                    .append('&')
-                    .append("path")
-                    .append('=')
-                    .append(path)
-                    .append("&p.limit=")
-                    .append(limit)
-                    .append("&p.hits=")
-                    .append(hitsType)
-                    .append("&p.properties=")
-                    .append(hitsProperties)
-                    .append("&p.nodedepth=")
-                    .append(nodeDepth);
-
-            if (properties != null) {
-                int propCtr = (properties.size() > 1) ? 1 : -1;
-                for (Property prop : properties) {
-                    String propKey = ((propCtr < 1) ? "" : propCtr++ + "_") + "property";
-                    sb.append('&')
-                            .append(propKey)
-                            .append('=')
-                            .append("jcr:content/")
-                            .append(prop.getName())
-                            .append('&')
-                            .append(propKey)
-                            .append(".value=")
-                            .append(prop.getValue());
-                }
-            }
-        } else {
-            sb.append(path).append("/jcr:content");
-
-            if (copyProperty != null && !copyProperty.equals("")) {
-                sb.append("/").append(copyProperty);
-            }
-        }
-
-        return sb.toString();
+        this.queryUrl = new QueryUrl(conn);
+        this.properties = properties;
     }
 
     /**
@@ -156,30 +73,43 @@ public class SlingClient {
     }
 
     /**
+     * Get an instance of the HttpClientContext with authentication set
+     * @param httpHost
+     * @param httpClient
+     * @return
+     */
+    private HttpClientContext getClientContext(HttpHost httpHost, CloseableHttpClient httpClient) {
+        AuthCache authCache = new BasicAuthCache();
+        BasicScheme basicAuth = new BasicScheme();
+        authCache.put(httpHost, basicAuth);
+        HttpClientContext localContext = HttpClientContext.create();
+        localContext.setAuthCache(authCache);
+
+        return localContext;
+    }
+
+    /**
      * Run a query to search for all Pages under the given path which match the specified properties
      * @param path       An existing path under which AEM Pages are being searched
-     * @param properties A list of properties which a page is expected to contain
      * @throws IOException
      */
-    public void runRead(String path, ArrayList<Property> properties) throws IOException {
+    public void runRead(String path) throws IOException {
         HttpHost httpHost = getHttpHost();
-        CloseableHttpClient httpclient = getHttpClient(httpHost);
+        CloseableHttpClient httpClient = getHttpClient(httpHost);
 
         try {
-            AuthCache authCache = new BasicAuthCache();
-            BasicScheme basicAuth = new BasicScheme();
-            authCache.put(httpHost, basicAuth);
-            HttpClientContext localContext = HttpClientContext.create();
-            localContext.setAuthCache(authCache);
-
-            HttpGet httpget = new HttpGet(buildUrl(path, properties));
+            HttpClientContext clientContext = getClientContext(httpHost, httpClient);
+            if (PageToolApp.verbose) {
+                System.out.println("Sling Query URL: " + queryUrl.buildUrl(path, properties.getMatchingProperties(), properties.getMatchingNodes(), properties.isCqPageType()));
+            }
+            HttpGet httpget = new HttpGet(queryUrl.buildUrl(path, properties.getMatchingProperties(), properties.getMatchingNodes(), properties.isCqPageType()));
 
             CloseableHttpResponse response;
             try {
-                response = httpclient.execute(httpHost, httpget, localContext);
+                response = httpClient.execute(httpHost, httpget, clientContext);
             } catch (Exception e) {
                 System.out.println("There has been an error connecting to AEM. (" + e.toString() + ")");
-                httpclient.close();
+                httpClient.close();
                 return;
             }
             try {
@@ -193,7 +123,7 @@ public class SlingClient {
                 response.close();
             }
         } finally {
-            httpclient.close();
+            httpClient.close();
         }
     }
 
@@ -207,14 +137,10 @@ public class SlingClient {
     public String getPropertyValue(String path, String propertyName) throws IOException {
         String value = null;
         HttpHost httpHost = getHttpHost();
-        CloseableHttpClient httpclient = getHttpClient(httpHost);
+        CloseableHttpClient httpClient = getHttpClient(httpHost);
 
         try {
-            AuthCache authCache = new BasicAuthCache();
-            BasicScheme basicAuth = new BasicScheme();
-            authCache.put(httpHost, basicAuth);
-            HttpClientContext localContext = HttpClientContext.create();
-            localContext.setAuthCache(authCache);
+            HttpClientContext clientContext = getClientContext(httpHost, httpClient);
 
             String lastNode = "";
             if (propertyName.contains("/")) {
@@ -222,14 +148,14 @@ public class SlingClient {
                 propertyName = propertyName.substring(propertyName.lastIndexOf("/") + 1);
             }
 
-            HttpGet httpget = new HttpGet(buildUrl(path, lastNode) + ".json");
+            HttpGet httpget = new HttpGet(queryUrl.buildUrl(path, lastNode) + ".json");
 
             CloseableHttpResponse response;
             try {
-                response = httpclient.execute(httpHost, httpget, localContext);
+                response = httpClient.execute(httpHost, httpget, clientContext);
             } catch (Exception e) {
                 System.out.println("There has been an error connecting to AEM. (" + e.toString() + ")");
-                httpclient.close();
+                httpClient.close();
                 return value;
             }
             try {
@@ -249,7 +175,7 @@ public class SlingClient {
                 response.close();
             }
         } finally {
-            httpclient.close();
+            httpClient.close();
         }
 
         return value;
@@ -258,30 +184,24 @@ public class SlingClient {
     /**
      * Run a POST to the AEM Page at the given path updating it with the given properties
      * @param path             The page that is expected to be updated
-     * @param properties       A list of properties that will be updated and/or added to the page
-     * @param deleteProperties A list of properties that will be deleted from the page
      * @throws IOException
      */
-    public void runUpdate(String path, ArrayList<Property> properties, ArrayList<String> deleteProperties) throws IOException {
+    public void runUpdate(String path) throws IOException {
         HttpHost httpHost = getHttpHost();
-        CloseableHttpClient httpclient = getHttpClient(httpHost);
+        CloseableHttpClient httpClient = getHttpClient(httpHost);
 
         try {
-            AuthCache authCache = new BasicAuthCache();
-            BasicScheme basicAuth = new BasicScheme();
-            authCache.put(httpHost, basicAuth);
-            HttpClientContext localContext = HttpClientContext.create();
-            localContext.setAuthCache(authCache);
+            HttpClientContext clientContext = getClientContext(httpHost, httpClient);
 
-            HttpPost httpPost = new HttpPost(buildUrl(false, path, properties));
+            HttpPost httpPost = new HttpPost(queryUrl.buildUrl(false, path, properties.getUpdateProperties()));
             List<NameValuePair> nvps = new ArrayList<NameValuePair>();
-            if (deleteProperties != null) {
-                for (String prop : deleteProperties) {
+            if (properties.getDeleteProperties() != null) {
+                for (String prop : properties.getDeleteProperties()) {
                     nvps.add(new BasicNameValuePair(prop + SlingPostConstants.SUFFIX_DELETE, "delete-this"));
                 }
             }
-            if (properties != null) {
-                for (Property prop : properties) {
+            if (properties.getUpdateProperties() != null) {
+                for (Property prop : properties.getUpdateProperties()) {
                     if (prop.isMulti()) {
                         String[] values = prop.getValues();
                         nvps.add(new BasicNameValuePair(prop.getName() + SlingPostConstants.TYPE_HINT_SUFFIX, "String[]"));
@@ -295,7 +215,7 @@ public class SlingClient {
 
             }
             httpPost.setEntity(new UrlEncodedFormEntity(nvps));
-            CloseableHttpResponse response2 = httpclient.execute(httpPost, localContext);
+            CloseableHttpResponse response2 = httpClient.execute(httpPost, clientContext);
 
             try {
                 this.statusCode = response2.getStatusLine().getStatusCode();
@@ -307,7 +227,7 @@ public class SlingClient {
                 response2.close();
             }
         } finally {
-            httpclient.close();
+            httpClient.close();
         }
     }
 
@@ -315,33 +235,27 @@ public class SlingClient {
      * Run a POST to the AEM Page  at the given path copying the values of the specified node to the specified
      * specified target node
      * @param path     The page that is expected to be updated
-     * @param copyFrom A list of the properties that will have values copied
-     * @param copyTo   A list of the properties that will be updated or created with new, copied values
      * @throws IOException
      */
-    public void runCopy(String path, ArrayList<String> copyFrom, ArrayList<String> copyTo) throws IOException {
-        HttpHost target = getHttpHost();
-        CloseableHttpClient httpclient = getHttpClient(target);
+    public void runCopy(String path) throws IOException {
+        HttpHost httpHost = getHttpHost();
+        CloseableHttpClient httpClient = getHttpClient(httpHost);
 
         try {
-            AuthCache authCache = new BasicAuthCache();
-            BasicScheme basicAuth = new BasicScheme();
-            authCache.put(target, basicAuth);
-            HttpClientContext localContext = HttpClientContext.create();
-            localContext.setAuthCache(authCache);
+            HttpClientContext clientContext = getClientContext(httpHost, httpClient);
 
             CloseableHttpResponse response = null;
-            for (int i = 0; i < copyFrom.size(); i++) {
-                String from = copyFrom.get(i);
-                String to = copyTo.get(i);
+            for (int i = 0; i < properties.getCopyFromProperties().size(); i++) {
+                String from = properties.getCopyFromProperties().get(i);
+                String to = properties.getCopyToProperties().get(i);
                 if (to == null) {
                     break;
                 }
-                HttpPost httpPost = new HttpPost(buildUrl(path, ""));
+                HttpPost httpPost = new HttpPost(queryUrl.buildUrl(path, ""));
                 List<NameValuePair> nvps = new ArrayList<NameValuePair>();
                 nvps.add(new BasicNameValuePair(to + SlingPostConstants.SUFFIX_COPY_FROM, from));
                 httpPost.setEntity(new UrlEncodedFormEntity(nvps));
-                response = httpclient.execute(httpPost, localContext);
+                response = httpClient.execute(httpPost, clientContext);
             }
 
             if (response != null) {
@@ -356,7 +270,7 @@ public class SlingClient {
                 }
             }
         } finally {
-            httpclient.close();
+            httpClient.close();
         }
     }
 
