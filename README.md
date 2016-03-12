@@ -70,6 +70,30 @@ More deeply nested properties can be copied using the same technique as specifie
 java -jar aem-page-tool.jar -n /content/path/to/my/page -i par/subpar/prop1 -o par/subpar/prop2 -P
 ```
 
+#####Simple Searching
+
+If just interested in finding which nodes contain specific properties with their values or finding if a node exists within a tree by a specific name, then you can perform a search. The option to search is `-f` and can be used as:
+
+```
+java -jar aem-page-tool.jar -n /content/path/to/my/page -f property=value
+```
+
+-or-
+
+```
+java -jar aem-page-tool.jar -n /content/path/to/my/page -f mynode
+```
+
+_Note: just as with sling queries, you can add a wildcard in the node name, i.e. `-f mynode_*`_
+
+#####Searching for Non cq:Page nodes
+
+By default, matches are performed on pages with a JCR primary type of "cq:Page". If you wish to leave the type unspecified, you can use the `-N` flag:
+
+```
+java -jar aem-page-tool.jar -n /content/path/to/my/page -N -f mynode
+```
+
 #####Passing credentials
 
 Credentials can be specified in any manner depending on your needs with any of the following options:
