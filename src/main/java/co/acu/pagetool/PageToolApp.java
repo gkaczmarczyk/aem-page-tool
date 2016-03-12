@@ -11,7 +11,7 @@ import java.io.PrintWriter;
  */
 public class PageToolApp {
 
-    static boolean verbose = false;
+    public static boolean verbose = false;
     static boolean dryRun = false;
 
     public static void main(String[] args) {
@@ -32,6 +32,7 @@ public class PageToolApp {
                 .addOption("P", "property", false, "Copy Values: Specify that the 'copy from' path is a node property, not a node name")
                 .addOption("d", true, "The property name & value to be deleted on the nodes (format is property=value). Any number of properties can be used.")
                 .addOption("f", "find", true, "Search the JCR at the given node for any of the criteria (format is node_name or property_name=property_value where property designates searching for a property name and value designates searching for the value of a property).")
+                .addOption("N", "non-page", false, "This search will not default node types to 'cq:Page'")
                 .addOption("y", false, "Perform a dry-run of the command. This will perform all get functions, but will not execute update or delete operations.")
                 .addOption("x", false, "Output more verbosely");
 
@@ -69,6 +70,9 @@ public class PageToolApp {
             OperationProperties props = new OperationProperties();
             nodeTool.setProperties(props);
 
+            if (cmd.hasOption('N')) {
+                props.setCqPageType(false);
+            }
             if (cmd.hasOption('m')) {
                 props.setMatchingProperties(cmd.getOptionValues('m'));
             }

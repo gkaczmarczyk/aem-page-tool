@@ -16,6 +16,9 @@ public class OperationProperties {
      */
     private ArrayList<Property> matchingProperties;
 
+    /**
+     * A list of nodes that is expected to be found.
+     */
     private ArrayList<String> matchingNodes = null;
 
     /**
@@ -39,6 +42,8 @@ public class OperationProperties {
     private ArrayList<String> deleteProperties;
 
     private boolean searchOnly = false;
+
+    private boolean cqPageType = true;
 
     /**
      * Get the set list of matching properties
@@ -87,10 +92,14 @@ public class OperationProperties {
         }
 
         try {
-            setMatchingProperties((String[]) properties.toArray());
+            setMatchingProperties(properties.toArray(new String[properties.size()]));
         } catch (InvalidPropertyException e) {
             System.out.println("Error setting the search property (" + e.toString() + ").");
         }
+    }
+
+    public ArrayList<String> getMatchingNodes() {
+        return this.matchingNodes;
     }
 
     /**
@@ -185,6 +194,14 @@ public class OperationProperties {
      */
     public boolean isSearchOnly() {
         return searchOnly;
+    }
+
+    public boolean isCqPageType() {
+        return cqPageType;
+    }
+
+    public void setCqPageType(boolean cqPageType) {
+        this.cqPageType = cqPageType;
     }
 
     /**

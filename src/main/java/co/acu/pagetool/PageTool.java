@@ -44,8 +44,8 @@ public class PageTool {
             if (slingClient.getStatusCode() == 200) {
                 Gson gson = new Gson();
                 ResultSet results = gson.fromJson(slingClient.getResponseText(), ResultSet.class);
-                System.out.print("Found " + results.getTotal() + " page" + (results.getTotal() == 1 ? "" : "s") + ". ");
                 if (!properties.isSearchOnly()) {
+                    System.out.print("Found " + results.getTotal() + (properties.isNonCqPage() ? " node" : " page") + (results.getTotal() == 1 ? "" : "s") + ". ");
                     System.out.println((!PageToolApp.dryRun) ? "Updating pages now..." : "Pages to be updated:");
                 }
 
@@ -93,7 +93,9 @@ public class PageTool {
                     }
                 }
 
-                if (!properties.isSearchOnly()) {
+                if (properties.isSearchOnly()) {
+                    System.out.print("\n  " + results.getTotal() + (properties.isNonCqPage() ? " node" : " page") + (results.getTotal() == 1 ? "" : "s") + " were found. ");
+                } else {
                     System.out.println("");
                     System.out.println(nodesUpdated + " node" + (nodesUpdated == 1 ? "" : "s") + " ha" + (nodesUpdated == 1 ? "s" : "ve") + " been updated.");
                 }

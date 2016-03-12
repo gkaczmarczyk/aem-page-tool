@@ -1,6 +1,7 @@
 package co.acu.pagetool.crx;
 
 import co.acu.pagetool.OperationProperties;
+import co.acu.pagetool.PageToolApp;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.apache.http.HttpEntity;
@@ -98,7 +99,10 @@ public class SlingClient {
 
         try {
             HttpClientContext clientContext = getClientContext(httpHost, httpClient);
-            HttpGet httpget = new HttpGet(queryUrl.buildUrl(path, properties.getMatchingProperties()));
+            if (PageToolApp.verbose) {
+                System.out.println("Sling Query URL: " + queryUrl.buildUrl(path, properties.getMatchingProperties(), properties.getMatchingNodes(), properties.isCqPageType()));
+            }
+            HttpGet httpget = new HttpGet(queryUrl.buildUrl(path, properties.getMatchingProperties(), properties.getMatchingNodes(), properties.isCqPageType()));
 
             CloseableHttpResponse response;
             try {
