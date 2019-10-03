@@ -68,7 +68,6 @@ public class PageToolApp {
             PageTool nodeTool = new PageTool(cmd.getOptionValue('n'));
             nodeTool.setConnection(conn);
             OperationProperties props = new OperationProperties();
-            nodeTool.setProperties(props);
 
             if (cmd.hasOption('N')) {
                 props.setCqPageType(false);
@@ -92,6 +91,8 @@ public class PageToolApp {
             if (cmd.hasOption('d')) {
                 props.setDeleteProperties(cmd.getOptionValues('d'));
             }
+
+            nodeTool.setProperties(props);
             nodeTool.run();
         } catch (Exception e) {
             System.out.println("Error parsing options (" + e.toString() + ")");

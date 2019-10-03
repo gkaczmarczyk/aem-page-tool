@@ -183,7 +183,11 @@ public class QueryUrl {
         if (isQuery) {
             sb.append(getQueryPath(path, properties, nodes).toString());
         } else {
-            sb.append(path).append("/jcr:content");
+            sb.append(path);
+
+            if (this.isCqPageType) {
+                sb.append("/jcr:content");
+            }
 
             if (copyProperty != null && !copyProperty.equals("")) {
                 sb.append("/").append(copyProperty);

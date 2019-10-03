@@ -38,10 +38,10 @@ public class SlingClient {
 
     public static final String SCHEME = "http";
 
-    CrxConnection conn;
-    QueryUrl queryUrl;
-    int statusCode = -1;
-    String responseText = null;
+    private CrxConnection conn;
+    private QueryUrl queryUrl;
+    private int statusCode = -1;
+    private String responseText = null;
     private OperationProperties properties;
 
     public SlingClient(CrxConnection conn, OperationProperties properties) {
@@ -193,8 +193,9 @@ public class SlingClient {
         try {
             HttpClientContext clientContext = getClientContext(httpHost, httpClient);
 
-            HttpPost httpPost = new HttpPost(queryUrl.buildUrl(false, path, properties.getUpdateProperties()));
-            List<NameValuePair> nvps = new ArrayList<NameValuePair>();
+            String postUrl = queryUrl.buildUrl(false, path, properties.getUpdateProperties());
+            HttpPost httpPost = new HttpPost(postUrl);
+            List<NameValuePair> nvps = new ArrayList<>();
             if (properties.getDeleteProperties() != null) {
                 for (String prop : properties.getDeleteProperties()) {
                     nvps.add(new BasicNameValuePair(prop + SlingPostConstants.SUFFIX_DELETE, "delete-this"));
@@ -252,7 +253,7 @@ public class SlingClient {
                     break;
                 }
                 HttpPost httpPost = new HttpPost(queryUrl.buildUrl(path, ""));
-                List<NameValuePair> nvps = new ArrayList<NameValuePair>();
+                List<NameValuePair> nvps = new ArrayList<>();
                 nvps.add(new BasicNameValuePair(to + SlingPostConstants.SUFFIX_COPY_FROM, from));
                 httpPost.setEntity(new UrlEncodedFormEntity(nvps));
                 response = httpClient.execute(httpPost, clientContext);

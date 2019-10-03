@@ -24,7 +24,7 @@ public class OperationProperties {
     /**
      * A list of properties that will be updated and/or added to the page
      */
-    private ArrayList<Property> updateProperties;
+    private ArrayList<Property> updateProperties = null;
 
     /**
      * A list of the properties that will have values copied
@@ -77,9 +77,9 @@ public class OperationProperties {
         if (searchValues == null || searchValues.length < 1) {
             return;
         }
-        ArrayList<String> properties = new ArrayList<String>();
+        ArrayList<String> properties = new ArrayList<>();
 
-        this.searchOnly = true;
+        this.searchOnly = (this.updateProperties == null);
         for (String value : searchValues) {
             if (!value.contains("=")) {
                 if (matchingNodes == null) {
@@ -116,6 +116,9 @@ public class OperationProperties {
      */
     public void setUpdateProperties(ArrayList<Property> updateProperties) {
         this.updateProperties = updateProperties;
+        if (this.searchOnly) {
+            this.searchOnly = false;
+        }
     }
 
     /**
@@ -128,6 +131,9 @@ public class OperationProperties {
             System.out.println("  Properties to update:");
         }
         this.updateProperties = getPropertiesAsList(properties);
+        if (this.searchOnly) {
+            this.searchOnly = false;
+        }
     }
 
     private ArrayList<String> setCopyProperties(String[] properties) {

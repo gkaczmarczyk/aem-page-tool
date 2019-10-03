@@ -2,7 +2,6 @@ package co.acu.pagetool;
 
 import co.acu.pagetool.crx.CrxConnection;
 import co.acu.pagetool.crx.SlingClient;
-import co.acu.pagetool.exception.InvalidPropertyException;
 import co.acu.pagetool.result.ResultPage;
 import co.acu.pagetool.result.ResultSet;
 import co.acu.pagetool.crx.Property;
