@@ -2,7 +2,7 @@
 
 A small utility to ease in updating a single or many properties for any number of pages in AEM. This will update properties for the page(s) in the `jcr:content` node of the page itself.
 
-###Usage
+### Usage
 
 Typical usage will include specifying the top-level node under which all pages that are expected to be updated fall or are descendents.
 Additionally, a single or set of properties are specified which are expected to be added or updated.
@@ -40,7 +40,7 @@ java -jar aem-page-tool.jar -n /content/path/to/my/page -p prop1=val1 -m hasProp
 
 So, only a page(s) that has the property `hasProp` with the value `currVal` will get updated.
 
-#####Copying Nodes
+##### Copying Nodes
 
 When copying nodes, you need to specify the source (or the node that should be copied) and the target (or the name of the node to which the source should be copied). The source is specified with `-i` (or `--copy-from`) & the target is specified with `-o` (or `--copy-to`).
 
@@ -56,7 +56,7 @@ java -jar aem-page-tool.jar -n /content/path/to/my/page -i par/node1 -o par/node
 
 _Note: At this time, only the first node specified will be copied regardless of how many nodes you specify at the command line._ 
 
-#####Copying Properties
+##### Copying Properties
 
 Copying properties is done similarly to copying nodes with the additional parameter `-P` (or `--property`). So, having a property, `prop1`, in the `jcr:content` node of the given page, you can copy the value of it to the newly specified property, `prop2` with the following command: 
 
@@ -70,7 +70,7 @@ More deeply nested properties can be copied using the same technique as specifie
 java -jar aem-page-tool.jar -n /content/path/to/my/page -i par/subpar/prop1 -o par/subpar/prop2 -P
 ```
 
-#####Simple Searching
+##### Simple Searching
 
 If just interested in finding which nodes contain specific properties with their values or finding if a node exists within a tree by a specific name, then you can perform a search. The option to search is `-f` and can be used as:
 
@@ -86,7 +86,7 @@ java -jar aem-page-tool.jar -n /content/path/to/my/page -f mynode
 
 _Note: just as with sling queries, you can add a wildcard in the node name, i.e. `-f mynode_*`_
 
-#####Searching for Non cq:Page nodes
+##### Searching for Non cq:Page nodes
 
 By default, matches are performed on pages with a JCR primary type of "cq:Page". If you wish to leave the type unspecified, you can use the `-N` flag:
 
@@ -94,7 +94,7 @@ By default, matches are performed on pages with a JCR primary type of "cq:Page".
 java -jar aem-page-tool.jar -n /content/path/to/my/page -N -f mynode
 ```
 
-#####Passing credentials
+##### Passing credentials
 
 Credentials can be specified in any manner depending on your needs with any of the following options:
 
@@ -106,7 +106,7 @@ Credentials can be specified in any manner depending on your needs with any of t
 - Specifying _only_ hostname: `-h hostname`
 - Specifying _only_ port: `-t portNum`
 
-#####Other Options
+##### Other Options
 
 A dry run will allow you to see which pages will get updated prior to making any real changes. It is enabled with `-y`.
 
