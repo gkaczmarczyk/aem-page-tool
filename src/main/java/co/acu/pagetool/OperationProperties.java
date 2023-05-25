@@ -83,7 +83,7 @@ public class OperationProperties {
         for (String value : searchValues) {
             if (!value.contains("=")) {
                 if (matchingNodes == null) {
-                    matchingNodes = new ArrayList<String>();
+                    matchingNodes = new ArrayList<>();
                 }
                 matchingNodes.add(value);
             } else {
@@ -137,7 +137,7 @@ public class OperationProperties {
     }
 
     private ArrayList<String> setCopyProperties(String[] properties) {
-        ArrayList<String> copyPropertiesList = new ArrayList<String>();
+        ArrayList<String> copyPropertiesList = new ArrayList<>();
 
         for (String prop : properties) {
             if (PageToolApp.verbose) {
@@ -181,7 +181,7 @@ public class OperationProperties {
 
     public void setDeleteProperties(String[] properties) throws InvalidPropertyException {
         if (this.deleteProperties == null) {
-            this.deleteProperties = new ArrayList<String>();
+            this.deleteProperties = new ArrayList<>();
         }
         if (PageToolApp.verbose) {
             System.out.println("  Properties to delete:");
@@ -216,7 +216,7 @@ public class OperationProperties {
      * @return ArrayList of Property objects
      */
     private ArrayList<Property> getPropertiesAsList(String[] propertiesStr) throws InvalidPropertyException {
-        ArrayList<Property> propertiesList = new ArrayList<Property>();
+        ArrayList<Property> propertiesList = new ArrayList<>();
 
         for (String propStr : propertiesStr) {
             Property property = Property.getProperty(propStr);

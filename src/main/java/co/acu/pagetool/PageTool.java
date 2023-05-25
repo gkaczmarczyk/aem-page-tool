@@ -71,7 +71,7 @@ public class PageTool {
                                     }
                                     if (properties.getUpdateProperties().size() > 1) { // just make sure there's only one copy target
                                         Property newProperty = new Property(properties.getCopyToProperties().get(0), fromPropertyValue);
-                                        ArrayList<Property> copyToList = new ArrayList<Property>();
+                                        ArrayList<Property> copyToList = new ArrayList<>();
                                         copyToList.add(newProperty);
                                         properties.setUpdateProperties(copyToList);
                                     }

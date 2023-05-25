@@ -38,11 +38,11 @@ public class SlingClient {
 
     public static final String SCHEME = "http";
 
-    private CrxConnection conn;
-    private QueryUrl queryUrl;
+    private final CrxConnection conn;
+    private final QueryUrl queryUrl;
     private int statusCode = -1;
     private String responseText = null;
-    private OperationProperties properties;
+    private final OperationProperties properties;
 
     public SlingClient(CrxConnection conn, OperationProperties properties) {
         this.conn = conn;
@@ -95,9 +95,8 @@ public class SlingClient {
      */
     public void runRead(String path) throws IOException {
         HttpHost httpHost = getHttpHost();
-        CloseableHttpClient httpClient = getHttpClient(httpHost);
 
-        try {
+        try (CloseableHttpClient httpClient = getHttpClient(httpHost)) {
             HttpClientContext clientContext = getClientContext(httpHost, httpClient);
             if (PageToolApp.verbose) {
                 System.out.println("Sling Query URL: " + queryUrl.buildUrl(path, properties.getMatchingProperties(), properties.getMatchingNodes(), properties.isCqPageType()));
@@ -122,8 +121,6 @@ public class SlingClient {
             } finally {
                 response.close();
             }
-        } finally {
-            httpClient.close();
         }
     }
 
@@ -137,9 +134,8 @@ public class SlingClient {
     public String getPropertyValue(String path, String propertyName) throws IOException {
         String value = null;
         HttpHost httpHost = getHttpHost();
-        CloseableHttpClient httpClient = getHttpClient(httpHost);
 
-        try {
+        try (CloseableHttpClient httpClient = getHttpClient(httpHost)) {
             HttpClientContext clientContext = getClientContext(httpHost, httpClient);
 
             String lastNode = "";
@@ -169,13 +165,11 @@ public class SlingClient {
                     JsonElement root = new JsonParser().parse(responseText);
                     value = root.getAsJsonObject().get(propertyName).getAsString();
                 } catch (Exception e) {
-                    System.out.print(" (" + e.toString() + ") ");
+                    System.out.print(" (" + e + ") ");
                 }
             } finally {
                 response.close();
             }
-        } finally {
-            httpClient.close();
         }
 
         return value;
@@ -188,9 +182,8 @@ public class SlingClient {
      */
     public void runUpdate(String path) throws IOException {
         HttpHost httpHost = getHttpHost();
-        CloseableHttpClient httpClient = getHttpClient(httpHost);
 
-        try {
+        try (CloseableHttpClient httpClient = getHttpClient(httpHost)) {
             HttpClientContext clientContext = getClientContext(httpHost, httpClient);
 
             String postUrl = queryUrl.buildUrl(false, path, properties.getUpdateProperties());
@@ -216,19 +209,14 @@ public class SlingClient {
 
             }
             httpPost.setEntity(new UrlEncodedFormEntity(nvps));
-            CloseableHttpResponse response2 = httpClient.execute(httpPost, clientContext);
 
-            try {
+            try (CloseableHttpResponse response2 = httpClient.execute(httpPost, clientContext)) {
                 this.statusCode = response2.getStatusLine().getStatusCode();
                 HttpEntity entity = response2.getEntity();
 
                 // do something useful with the response body and ensure it is fully consumed
                 EntityUtils.consume(entity);
-            } finally {
-                response2.close();
             }
-        } finally {
-            httpClient.close();
         }
     }
 
@@ -240,9 +228,8 @@ public class SlingClient {
      */
     public void runCopy(String path) throws IOException {
         HttpHost httpHost = getHttpHost();
-        CloseableHttpClient httpClient = getHttpClient(httpHost);
 
-        try {
+        try (CloseableHttpClient httpClient = getHttpClient(httpHost)) {
             HttpClientContext clientContext = getClientContext(httpHost, httpClient);
 
             CloseableHttpResponse response = null;
@@ -270,8 +257,6 @@ public class SlingClient {
                     response.close();
                 }
             }
-        } finally {
-            httpClient.close();
         }
     }
 

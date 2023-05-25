@@ -181,7 +181,7 @@ public class QueryUrl {
         StringBuilder sb = getHostUrl();
 
         if (isQuery) {
-            sb.append(getQueryPath(path, properties, nodes).toString());
+            sb.append(getQueryPath(path, properties, nodes));
         } else {
             sb.append(path);
 

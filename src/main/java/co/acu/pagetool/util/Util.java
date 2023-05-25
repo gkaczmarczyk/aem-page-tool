@@ -1,10 +1,10 @@
-package co.acu.pagetool;
+package co.acu.pagetool.util;
 
 /**
  * This class contains a set of small, useful utility methods
  * @author Greg Kaczmarczyk
  */
-public class CommonUtils {
+public class Util {
 
     /**
      * Execute a shell command

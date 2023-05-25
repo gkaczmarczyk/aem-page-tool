@@ -2,6 +2,7 @@ package co.acu.pagetool;
 
 import co.acu.pagetool.crx.CrxConnection;
 import co.acu.pagetool.crx.CrxConnectionFactory;
+import co.acu.pagetool.util.Util;
 import org.apache.commons.cli.*;
 
 import java.io.PrintWriter;
@@ -25,12 +26,12 @@ public class PageToolApp {
                 .addOption("s", true, "Server: A combination of hostname & port of the AEM instance to be accessed (format is localhost:4502)")
                 .addOption("c", true, "Credentials: A shorthand combination of username, password, hostname, & port (format is admin:admin@localhost:4502)")
                 .addOption("n", true, "The parent node of the nodes expected to be updated. Nodes updated will only be descendents of this provided node.")
-                .addOption("m", true, "The node to be updated must contain the specified property & its corresponding value (format property=value). Any number of matching properties can be used.")
+                .addOption("m", "match", true, "The node to be updated must contain the specified property & its corresponding value (format property=value). Any number of matching properties can be used.")
                 .addOption("p", true, "The property name & value to be updated on the nodes (format is property=value). Any number of properties can be used.")
                 .addOption("i", "copy-from", true, "Copy Values: The property name from which a value should be copied (Must be used with -o option)")
                 .addOption("o", "copy-to", true, "Copy Values: The property name to which the value should be copied (Must be used with -i option)")
                 .addOption("P", "property", false, "Copy Values: Specify that the 'copy from' path is a node property, not a node name")
-                .addOption("d", true, "The property name & value to be deleted on the nodes (format is property=value). Any number of properties can be used.")
+                .addOption("d", "delete", true, "The property name & value to be deleted on the nodes (format is property=value). Any number of properties can be used.")
                 .addOption("f", "find", true, "Search the JCR at the given node for any of the criteria (format is node_name or property_name=property_value where property designates searching for a property name and value designates searching for the value of a property).")
                 .addOption("N", "non-page", false, "This search will not default node types to 'cq:Page'")
                 .addOption("y", false, "Perform a dry-run of the command. This will perform all get functions, but will not execute update or delete operations.")
@@ -110,7 +111,7 @@ public class PageToolApp {
     public static void printHelp(Options options) {
         int cols = 80;
         try {
-            String colVal = CommonUtils.execCommand(new String[] { "bash", "-c", "tput cols 2> /dev/tty" });
+            String colVal = Util.execCommand(new String[] { "bash", "-c", "tput cols 2> /dev/tty" });
             int calcCols = Integer.parseInt(colVal);
             if (calcCols > cols) {
                 cols = calcCols;
