@@ -2,6 +2,7 @@ package co.acu.pagetool.crx;
 
 import co.acu.pagetool.OperationProperties;
 import co.acu.pagetool.PageToolApp;
+import co.acu.pagetool.util.Output;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.apache.http.HttpEntity;
@@ -99,7 +100,7 @@ public class SlingClient {
         try (CloseableHttpClient httpClient = getHttpClient(httpHost)) {
             HttpClientContext clientContext = getClientContext(httpHost, httpClient);
             if (PageToolApp.verbose) {
-                System.out.println("Sling Query URL: " + queryUrl.buildUrl(path, properties.getMatchingProperties(), properties.getMatchingNodes(), properties.isCqPageType()));
+                Output.ninfo("Sling Query URL: ").nhl(queryUrl.buildUrl(path, properties.getMatchingProperties(), properties.getMatchingNodes(), properties.isCqPageType()));
             }
             HttpGet httpget = new HttpGet(queryUrl.buildUrl(path, properties.getMatchingProperties(), properties.getMatchingNodes(), properties.isCqPageType()));
 
@@ -107,7 +108,7 @@ public class SlingClient {
             try {
                 response = httpClient.execute(httpHost, httpget, clientContext);
             } catch (Exception e) {
-                System.out.println("There has been an error connecting to AEM. (" + e.toString() + ")");
+                Output.nwarn("There has been an error connecting to AEM. (").ninfo(e.toString()).nwarn(")");
                 httpClient.close();
                 return;
             }
@@ -115,7 +116,7 @@ public class SlingClient {
                 StatusLine status = response.getStatusLine();
                 statusCode = status.getStatusCode();
                 if (statusCode != 200) {
-                    System.out.println("Error accessing requested URL. (status code = " + statusCode + ")");
+                    Output.nwarn("Error accessing requested URL. (status code = ").ninfo(Integer.toString(statusCode)).nwarn(")");
                 }
                 responseText = EntityUtils.toString(response.getEntity());
             } finally {
@@ -150,7 +151,7 @@ public class SlingClient {
             try {
                 response = httpClient.execute(httpHost, httpget, clientContext);
             } catch (Exception e) {
-                System.out.println("There has been an error connecting to AEM. (" + e.toString() + ")");
+                Output.nwarn("There has been an error connecting to AEM. (").ninfo(e.toString()).nwarn(")");
                 httpClient.close();
                 return value;
             }
@@ -158,14 +159,14 @@ public class SlingClient {
                 StatusLine status = response.getStatusLine();
                 statusCode = status.getStatusCode();
                 if (statusCode != 200) {
-                    System.out.println("Error accessing requested URL. (status code = " + statusCode + ")");
+                    Output.nwarn("Error accessing requested URL. (status code = ").ninfo(Integer.toString(statusCode)).nwarn(")");
                 }
                 responseText = EntityUtils.toString(response.getEntity());
                 try {
                     JsonElement root = new JsonParser().parse(responseText);
                     value = root.getAsJsonObject().get(propertyName).getAsString();
                 } catch (Exception e) {
-                    System.out.print(" (" + e + ") ");
+                    Output.nwarn("Error parsing response. (").ninfo(e.toString()).nwarn(")");
                 }
             } finally {
                 response.close();
@@ -221,7 +222,7 @@ public class SlingClient {
     }
 
     /**
-     * Run a POST to the AEM Page  at the given path copying the values of the specified node to the specified
+     * Run a POST to the AEM Page at the given path copying the values of the specified node to the specified
      * specified target node
      * @param path     The page that is expected to be updated
      * @throws IOException

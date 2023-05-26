@@ -5,10 +5,14 @@ import co.acu.pagetool.crx.SlingClient;
 import co.acu.pagetool.result.ResultPage;
 import co.acu.pagetool.result.ResultSet;
 import co.acu.pagetool.crx.Property;
+import co.acu.pagetool.util.Output;
 import com.google.gson.Gson;
 
 import java.io.IOException;
 import java.util.ArrayList;
+
+import static co.acu.pagetool.util.Output.NOT_OK;
+import static co.acu.pagetool.util.Output.OK;
 
 /**
  * @author Gregory Kaczmarczyk
@@ -35,38 +39,38 @@ public class PageTool {
 
     private void runProcess() {
         if (PageToolApp.dryRun) {
-            System.out.println("Dry Run of update operation ...");
+            Output.info("Dry Run of update operation ...");
         }
         try {
             slingClient.runRead(parentNodePath);
-            System.out.println("");
+            Output.line();
             if (slingClient.getStatusCode() == 200) {
                 Gson gson = new Gson();
                 ResultSet results = gson.fromJson(slingClient.getResponseText(), ResultSet.class);
                 if (!properties.isSearchOnly()) {
-                    System.out.print("Found " + results.getTotal() + (properties.isCqPageType() ? " page" : " node") + (results.getTotal() == 1 ? "" : "s") + ". ");
+                    Output.nhl("Found " + results.getTotal() + (properties.isCqPageType() ? " page" : " node") + (results.getTotal() == 1 ? "" : "s") + ". ");
                     if (results.getTotal() > 0) {
-                        System.out.println((!PageToolApp.dryRun) ? "Updating pages now..." : "Pages to be updated:");
+                        Output.hl((!PageToolApp.dryRun) ? "Updating pages now..." : "Pages to be updated:");
                     } else {
-                        System.out.println();
+                        Output.line();
                     }
                 }
 
                 for (ResultPage page : results.getHits()) {
                     if (properties.isSearchOnly()) {
-                        System.out.println("    " + page.getJcrPath());
+                        Output.info("    " + page.getJcrPath());
                         continue;
                     }
-                    System.out.print((!PageToolApp.dryRun ? "Updating " : "    ") + page.getJcrPath());
+                    Output.ninfo((!PageToolApp.dryRun ? "Updating " : "    ") + page.getJcrPath());
                     if (!PageToolApp.dryRun) {
-                        System.out.print(" ...");
+                        Output.ninfo(" ...");
                         try {
                             // we're making copying properties take precedence to updates or deletes
                             if (properties.getCopyFromProperties() != null && properties.getCopyFromProperties().size() > 0 && properties.getCopyFromProperties().size() == properties.getCopyToProperties().size()) {
                                 if (isPropertyPath) {
                                     String fromPropertyValue = slingClient.getPropertyValue(page.getJcrPath(), properties.getCopyFromProperties().get(0));
                                     if (fromPropertyValue == null) {
-                                        System.out.println("NOT OK");
+                                        Output.info(NOT_OK);
                                         continue;
                                     }
                                     if (properties.getUpdateProperties().size() > 1) { // just make sure there's only one copy target
@@ -84,34 +88,36 @@ public class PageTool {
                             }
                             if (slingClient.getStatusCode() == 200) {
                                 nodesUpdated++;
-                                System.out.println("OK");
+                                Output.info(OK);
                             } else {
-                                System.out.println("NOT OK" + (PageToolApp.verbose ? " (HTTP=" + slingClient.getStatusCode() + ")" : ""));
+                                Output.info(NOT_OK + (PageToolApp.verbose ? " (HTTP=" + slingClient.getStatusCode() + ")" : ""));
                             }
                         } catch (Exception e) {
-                            System.out.println("NOT OK" + (PageToolApp.verbose ? " (" + e.toString() + ")" : ""));
+                            Output.info(NOT_OK + (PageToolApp.verbose ? " (" + e.toString() + ")" : ""));
                         }
                     } else {
-                        System.out.println("");
+                        Output.line();
                     }
                 }
 
                 if (properties.isSearchOnly()) {
-                    System.out.print("\n  " + results.getTotal() + (properties.isCqPageType() ? " page" : " node") + (results.getTotal() == 1 ? "" : "s") + " were found. ");
+                    Output.nhl("\n  " + results.getTotal() + (properties.isCqPageType() ? " page" : " node") +
+                            (results.getTotal() == 1 ? " was" : "s were") + " found. ");
                 } else {
                     if (results.getTotal() > 0) {
-                        System.out.println("");
-                        System.out.println(nodesUpdated + " node" + (nodesUpdated == 1 ? "" : "s") + " ha" + (nodesUpdated == 1 ? "s" : "ve") + " been updated.");
+                        Output.line();
+                        Output.hl(nodesUpdated + " node" + (nodesUpdated == 1 ? "" : "s") + " ha" + (nodesUpdated == 1 ? "s" : "ve") + " been updated.");
                     }
                 }
+                Output.line();
             } else {
                 if (slingClient.getStatusCode() < 0) {
-                    System.out.println("Server appears disconnected. No changes made.");
+                    Output.info("Server appears disconnected. No changes made.");
                 } else {
-                    System.out.println("Error accessing URL. Received " + slingClient.getStatusCode() + " status code.");
+                    Output.warn("Error accessing URL. Received " + slingClient.getStatusCode() + " status code.");
                 }
             }
-            System.out.println("");
+            Output.line();
         } catch (IOException e) {
             e.printStackTrace();
         }
