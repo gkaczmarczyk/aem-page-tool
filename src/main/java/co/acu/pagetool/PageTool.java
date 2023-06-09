@@ -83,6 +83,8 @@ public class PageTool {
                                 } else {
                                     slingClient.runCopy(page.getJcrPath());
                                 }
+                            } else if (properties.getPropertyValueReplacement() != null) {
+                                slingClient.runReplacement(page.getJcrPath());
                             } else {
                                 slingClient.runUpdate(page.getJcrPath());
                             }

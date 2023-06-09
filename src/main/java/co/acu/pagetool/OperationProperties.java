@@ -26,6 +26,8 @@ public class OperationProperties {
      */
     private ArrayList<Property> updateProperties = null;
 
+    private Property propertyValueReplacement = null;
+
     /**
      * A list of the properties that will have values copied
      */
@@ -134,6 +136,31 @@ public class OperationProperties {
         if (this.searchOnly) {
             this.searchOnly = false;
         }
+    }
+
+    public Property getPropertyValueReplacement() {
+        return propertyValueReplacement;
+    }
+
+    public ArrayList<Property> getPropertyValueReplacementAsList() {
+        if (propertyValueReplacement == null) {
+            return null;
+        }
+
+        ArrayList<Property> propList = new ArrayList<>();
+        propList.add(propertyValueReplacement);
+
+        return propList;
+    }
+
+    public void setPropertyValueReplacement(String[] property, String[] replacement) throws Exception {
+        ArrayList<Property> properties = getPropertiesAsList(property);
+        Property first = properties.get(0);
+        String match = first.getValue();
+        String repl = replacement[0];
+        first.setValues(new String[]{match, repl});
+
+        propertyValueReplacement = first;
     }
 
     private ArrayList<String> setCopyProperties(String[] properties) {

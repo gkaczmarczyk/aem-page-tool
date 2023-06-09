@@ -31,6 +31,7 @@ public class PageToolApp {
                 .addOption("i", "copy-from", true, "Copy Values: The property name from which a value should be copied (Must be used with -o option)")
                 .addOption("o", "copy-to", true, "Copy Values: The property name to which the value should be copied (Must be used with -i option)")
                 .addOption("P", "property", false, "Copy Values: Specify that the 'copy from' path is a node property, not a node name")
+                .addOption("r", "replace", true, "Replace the specified string given in the -p switch with this new string")
                 .addOption("d", "delete", true, "The property name & value to be deleted on the nodes (format is property=value). Any number of properties can be used.")
                 .addOption("f", "find", true, "Search the JCR at the given node for any of the criteria (format is node_name or property_name=property_value where property designates searching for a property name and value designates searching for the value of a property).")
                 .addOption("N", "non-page", false, "This search will not default node types to 'cq:Page'")
@@ -86,8 +87,11 @@ public class PageToolApp {
                 props.setCopyToProperties(cmd.getOptionValues('o'));
             }
             nodeTool.setIsPropertyPath(cmd.hasOption('P'));
-            if (cmd.hasOption('p')) {
+            if (cmd.hasOption('p') && !cmd.hasOption('r')) {
                 props.setUpdateProperties(cmd.getOptionValues('p'));
+            }
+            if (cmd.hasOption('r')) {
+                props.setPropertyValueReplacement(cmd.getOptionValues('p'), cmd.getOptionValues('r'));
             }
             if (cmd.hasOption('d')) {
                 props.setDeleteProperties(cmd.getOptionValues('d'));

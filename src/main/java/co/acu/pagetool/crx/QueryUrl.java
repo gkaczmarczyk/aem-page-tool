@@ -37,7 +37,6 @@ public class QueryUrl {
 
     /**
      * Get the Sling URL which includes the scheme & hostname
-     * @return
      */
     private StringBuilder getHostUrl() {
         StringBuilder sb = new StringBuilder();
@@ -94,11 +93,20 @@ public class QueryUrl {
                     sb.append("jcr:content/");
                 }
 
-                sb.append(prop.getName())
-                        .append('&')
-                        .append(propKey)
-                        .append(".value=")
-                        .append(prop.getValue());
+                if (!prop.isMulti()) {
+                    sb.append(prop.getName())
+                            .append('&')
+                            .append(propKey)
+                            .append(".value=")
+                            .append(prop.getValue());
+                } else {
+                    // if we've got a multi-value property here, then we're assuming it's a replacement & we only need
+                    // to check for the existence of the property
+                    sb.append(prop.getName())
+                            .append('&')
+                            .append(propKey)
+                            .append(".operation=exists");
+                }
             }
         }
 
@@ -137,7 +145,7 @@ public class QueryUrl {
 
     /**
      * Build the Sling URL
-     * @param isQuery Whether or not the this Sling request is a query
+     * @param isQuery Whether or not this Sling request is a query
      * @param path The top level JCR node path which should be searched
      * @param properties
      * @return
@@ -148,7 +156,7 @@ public class QueryUrl {
 
     /**
      * Build the Sling URL
-     * @param isQuery Whether or not the this Sling request is a query
+     * @param isQuery Whether or not this Sling request is a query
      * @param path The top level JCR node path which should be searched
      * @param properties
      * @param nodes A list of node names that are being searched
@@ -170,7 +178,7 @@ public class QueryUrl {
 
     /**
      * Build the Sling URL
-     * @param isQuery Whether or not the this Sling request is a query
+     * @param isQuery Whether or not this Sling request is a query
      * @param path The top level JCR node path which should be searched
      * @param properties
      * @param nodes A list of node names that are being searched

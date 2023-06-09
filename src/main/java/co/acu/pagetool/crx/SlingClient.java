@@ -99,10 +99,11 @@ public class SlingClient {
 
         try (CloseableHttpClient httpClient = getHttpClient(httpHost)) {
             HttpClientContext clientContext = getClientContext(httpHost, httpClient);
+            ArrayList<Property> propertiesList = properties.getPropertyValueReplacementAsList() != null ? properties.getPropertyValueReplacementAsList() : properties.getMatchingProperties();
             if (PageToolApp.verbose) {
-                Output.ninfo("Sling Query URL: ").nhl(queryUrl.buildUrl(path, properties.getMatchingProperties(), properties.getMatchingNodes(), properties.isCqPageType()));
+                Output.ninfo("Sling Query URL: ").nhl(queryUrl.buildUrl(path, propertiesList, properties.getMatchingNodes(), properties.isCqPageType()));
             }
-            HttpGet httpget = new HttpGet(queryUrl.buildUrl(path, properties.getMatchingProperties(), properties.getMatchingNodes(), properties.isCqPageType()));
+            HttpGet httpget = new HttpGet(queryUrl.buildUrl(path, propertiesList, properties.getMatchingNodes(), properties.isCqPageType()));
 
             CloseableHttpResponse response;
             try {
@@ -129,7 +130,7 @@ public class SlingClient {
      * Get the value of the property from its given parent path
      * @param path         The node path
      * @param propertyName The name of the property. This could include subnodes within a node's jcr:content node.
-     * @return The value of the given property or null if not found or if it could not be accessed fro whatever reason
+     * @return The value of the given property or null if not found or if it could not be accessed for whatever reason
      * @throws IOException
      */
     public String getPropertyValue(String path, String propertyName) throws IOException {
@@ -222,8 +223,8 @@ public class SlingClient {
     }
 
     /**
-     * Run a POST to the AEM Page at the given path copying the values of the specified node to the specified
-     * specified target node
+     * Run a POST to the AEM Page at the given path copying the values of the specified node to the specified target
+     * node
      * @param path     The page that is expected to be updated
      * @throws IOException
      */
@@ -257,6 +258,34 @@ public class SlingClient {
                 } finally {
                     response.close();
                 }
+            }
+        }
+    }
+
+    public void runReplacement(String path) throws Exception {
+        String propertyValue = this.getPropertyValue(path, properties.getPropertyValueReplacement().getName());
+        if (propertyValue == null) {
+            throw new Exception("Unable to obtain value of property");
+        }
+        String[] values = properties.getPropertyValueReplacement().getValues();
+        propertyValue = propertyValue.replace(values[0], values[1]);
+
+        HttpHost httpHost = getHttpHost();
+
+        try (CloseableHttpClient httpClient = getHttpClient(httpHost)) {
+            HttpClientContext clientContext = getClientContext(httpHost, httpClient);
+
+            HttpPost httpPost = new HttpPost(queryUrl.buildUrl(path, ""));
+            List<NameValuePair> nvps = new ArrayList<>();
+            nvps.add(new BasicNameValuePair(properties.getPropertyValueReplacement().getName(), propertyValue));
+            httpPost.setEntity(new UrlEncodedFormEntity(nvps));
+
+            try (CloseableHttpResponse response = httpClient.execute(httpPost, clientContext)) {
+                this.statusCode = response.getStatusLine().getStatusCode();
+                HttpEntity entity = response.getEntity();
+
+                // do something useful with the response body and ensure it is fully consumed
+                EntityUtils.consume(entity);
             }
         }
     }
