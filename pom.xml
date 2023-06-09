@@ -5,7 +5,7 @@
     <groupId>co.acu.pagetool</groupId>
     <artifactId>aem-page-tool</artifactId>
     <packaging>jar</packaging>
-    <version>0.3.0</version>
+    <version>0.4.0</version>
     <name>pagetool</name>
 
     <dependencies>
