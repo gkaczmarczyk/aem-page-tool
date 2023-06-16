@@ -1,5 +1,7 @@
 package co.acu.pagetool.crx;
 
+import co.acu.pagetool.PageToolApp;
+
 import java.util.ArrayList;
 
 public class QueryUrl {
@@ -41,7 +43,7 @@ public class QueryUrl {
     private StringBuilder getHostUrl() {
         StringBuilder sb = new StringBuilder();
 
-        sb.append(SlingClient.SCHEME)
+        sb.append(PageToolApp.secure ? SlingClient.SCHEME_SECURE : SlingClient.SCHEME)
                 .append("://")
                 .append(conn.getHostname())
                 .append(':')

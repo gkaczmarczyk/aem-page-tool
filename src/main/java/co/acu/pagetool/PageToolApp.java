@@ -12,6 +12,8 @@ import java.io.PrintWriter;
  */
 public class PageToolApp {
 
+    public static boolean secure = false;
+    public static boolean bypassSSL = false;
     public static boolean verbose = false;
     static boolean dryRun = false;
 
@@ -25,6 +27,8 @@ public class PageToolApp {
                 .addOption("t", true, "Server: The port of the AEM instance to be accessed (default is 4502)")
                 .addOption("s", true, "Server: A combination of hostname & port of the AEM instance to be accessed (format is localhost:4502)")
                 .addOption("c", true, "Credentials: A shorthand combination of username, password, hostname, & port (format is admin:admin@localhost:4502)")
+                .addOption("S", false, "When set, use HTTPS instead of HTTP")
+                .addOption("C", false, "When set, SSL certificate checking will be bypassed")
                 .addOption("n", true, "The parent node of the nodes expected to be updated. Nodes updated will only be descendents of this provided node.")
                 .addOption("m", "match", true, "The node to be updated must contain the specified property & its corresponding value (format property=value). Any number of matching properties can be used.")
                 .addOption("p", true, "The property name & value to be updated on the nodes (format is property=value). Any number of properties can be used.")
@@ -57,6 +61,12 @@ public class PageToolApp {
             if (!cmd.hasOption('p') && !cmd.hasOption('d') && !cmd.hasOption("i") && !cmd.hasOption('f')) {
                 System.out.println("Property to update or delete (-p or -d) is a required argument.");
                 return;
+            }
+            if (cmd.hasOption('S')) {
+                PageToolApp.secure = true;
+            }
+            if (cmd.hasOption('C')) {
+                PageToolApp.bypassSSL = true;
             }
             if (cmd.hasOption('x')) {
                 PageToolApp.verbose = true;

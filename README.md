@@ -136,6 +136,22 @@ java -jar aem-page-tool.jar -n /content/path/to/my/page -i par/subpar/prop1 -o p
 ## <a id=#misc-option>Other Options</a>
 
 
+##### Use secure connection (HTTPS)
+
+The connection to AEM is by default made over http. If you need to connect to your server via https, use the `-S` option.
+
+```
+java -jar aem-page-tool.jar -n /content/path/to/my/page -p prop1=val1 -S
+```
+
+##### Skip SSL Checking
+
+When using the previous option, `-S`, by default, Java validates the SSL certificate for the host you specify unless you use localhost as the host to which you're connecting. If your host is an IP address or a domain with no valid SSL certificate, then you'll need to bypass SSL certificate checking by using the `-C` option.
+
+```
+java -jar aem-page-tool.jar -n /content/path/to/my/page -p prop1=val1 -S -C
+```
+
 ##### Dry Run
 
 A dry run will allow you to see which pages will get updated prior to making any real changes. It is enabled with `-y`.
