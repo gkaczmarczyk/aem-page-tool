@@ -86,10 +86,18 @@ Rather than updating properties, you can also delete properties that the page ma
 java -jar aem-page-tool.jar -n /content/path/to/my/page -d undesiredProp
 ```
 
-##### Repacing Properties
+##### Replacing Properties
 
 You can specify both `-p` & `-d` arguments. If you specify `-d` & `-p` with the same property name, the update will follow the rules of the SlingPostServlet. _The property is first deleted and then filled with the new content._
 
+
+##### String Replacement in Single-Value Properties
+
+You can replace a portion of the string of the value of a single-value property with another string by combining the `-p` and `-r` properties.
+
+```
+java -jar aem-page-tool.jar -n /content/path/to/my/page -p prop1=orig_str_portion -r replacement_str
+```
 
 ##### Conditional Replacement
 
