@@ -18,16 +18,24 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.BasicAuthCache;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.util.EntityUtils;
 import org.apache.sling.servlets.post.SlingPostConstants;
 
 import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,6 +46,7 @@ import java.util.List;
 public class SlingClient {
 
     public static final String SCHEME = "http";
+    public static final String SCHEME_SECURE = "https";
 
     private final CrxConnection conn;
     private final QueryUrl queryUrl;
@@ -56,7 +65,7 @@ public class SlingClient {
      * @return
      */
     private HttpHost getHttpHost() {
-        return new HttpHost(conn.getHostname(), Integer.parseInt(conn.getPort()), SCHEME);
+        return new HttpHost(conn.getHostname(), Integer.parseInt(conn.getPort()), PageToolApp.secure ? SCHEME_SECURE : SCHEME);
     }
 
     /**
@@ -69,6 +78,27 @@ public class SlingClient {
         credsProvider.setCredentials(
                 new AuthScope(httpHost.getHostName(), httpHost.getPort()),
                 new UsernamePasswordCredentials(conn.getUsername(), conn.getPassword()));
+
+        if (PageToolApp.bypassSSL) {
+            CloseableHttpClient httpClient = null;
+            try {
+                httpClient = HttpClients.custom().setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                        .setSSLContext(new SSLContextBuilder().loadTrustMaterial(null, new TrustStrategy() {
+                            public boolean isTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
+                                return true;
+                            }
+                        }).build()).setDefaultCredentialsProvider(credsProvider).build();
+
+            } catch (KeyManagementException e) {
+                Output.nwarn("KeyManagementException in creating http client instance. (").ninfo(e.toString()).nwarn(")");
+            } catch (NoSuchAlgorithmException e) {
+                Output.nwarn("NoSuchAlgorithmException in creating http client instance. (").ninfo(e.toString()).nwarn(")");
+            } catch (KeyStoreException e) {
+                Output.nwarn("KeyStoreException in creating http client instance. (").ninfo(e.toString()).nwarn(")");
+            }
+
+            return httpClient;
+        }
 
         return HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
     }
