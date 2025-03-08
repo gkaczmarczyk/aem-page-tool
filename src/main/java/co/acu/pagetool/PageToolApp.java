@@ -1,91 +1,131 @@
 package co.acu.pagetool;
 
-import co.acu.pagetool.crx.CrxConnection;
-import co.acu.pagetool.crx.CrxConnectionFactory;
+import co.acu.pagetool.crx.*;
+import co.acu.pagetool.exception.InvalidPropertyException;
+import co.acu.pagetool.util.Output;
 import co.acu.pagetool.util.Util;
 import org.apache.commons.cli.*;
 
 import java.io.PrintWriter;
+import java.util.ArrayList;
 
 /**
- * Node Tool allows updating JCR properties en masse easily.
+ * Entry point for the PageTool CLI application, which allows mass updates to JCR properties in AEM.
  */
 public class PageToolApp {
 
-    public static boolean secure = false;
     public static boolean bypassSSL = false;
     public static boolean verbose = false;
-    static boolean dryRun = false;
+    public static boolean dryRun = false;
 
     public static void main(String[] args) {
-        Options options = new Options();
-        options
-                .addOption("u", true, "Credentials: The username for logging into AEM (default is admin)")
-                .addOption("w", true, "Credentials: The password for logging into AEM (default is admin)")
-                .addOption("l", true, "Credentials: A combination of username & password for logging into AEM (format is admin:admin)")
-                .addOption("h", true, "Server: The hostname of the AEM instance to be accessed (default is localhost)")
-                .addOption("t", true, "Server: The port of the AEM instance to be accessed (default is 4502)")
-                .addOption("s", true, "Server: A combination of hostname & port of the AEM instance to be accessed (format is localhost:4502)")
-                .addOption("c", true, "Credentials: A shorthand combination of username, password, hostname, & port (format is admin:admin@localhost:4502)")
-                .addOption("S", false, "When set, use HTTPS instead of HTTP")
-                .addOption("C", false, "When set, SSL certificate checking will be bypassed")
-                .addOption("n", true, "The parent node of the nodes expected to be updated. Nodes updated will only be descendents of this provided node.")
-                .addOption("m", "match", true, "The node to be updated must contain the specified property & its corresponding value (format property=value). Any number of matching properties can be used.")
-                .addOption("p", true, "The property name & value to be updated on the nodes (format is property=value). Any number of properties can be used.")
-                .addOption("i", "copy-from", true, "Copy Values: The property name from which a value should be copied (Must be used with -o option)")
-                .addOption("o", "copy-to", true, "Copy Values: The property name to which the value should be copied (Must be used with -i option)")
-                .addOption("P", "property", false, "Copy Values: Specify that the 'copy from' path is a node property, not a node name")
-                .addOption("r", "replace", true, "Replace the specified string given in the -p switch with this new string")
-                .addOption("d", "delete", true, "The property name & value to be deleted on the nodes (format is property=value). Any number of properties can be used.")
-                .addOption("f", "find", true, "Search the JCR at the given node for any of the criteria (format is node_name or property_name=property_value where property designates searching for a property name and value designates searching for the value of a property).")
-                .addOption("N", "non-page", false, "This search will not default node types to 'cq:Page'")
-                .addOption("y", false, "Perform a dry-run of the command. This will perform all get functions, but will not execute update or delete operations.")
-                .addOption("x", false, "Output more verbosely");
+        Options options = buildOptions();
+        CommandLine cmd = parseCommandLine(options, args);
+        if (cmd == null) {
+            return;
+        }
 
+        boolean secure = cmd.hasOption('S');
+        bypassSSL = cmd.hasOption('C');
+        verbose = cmd.hasOption('x');
+        dryRun = cmd.hasOption('y');
+
+        CrxConnection conn = CrxConnectionFactory.getCrxConnection(cmd, secure);
+        if (conn == null) {
+            Output.warn("Failed to configure AEM connection.");
+            return;
+        }
+
+        OperationProperties props = new OperationProperties();
+        String parentNodePath = cmd.getOptionValue('n');
+        if (!configureProperties(props, cmd, options)) {
+            return; // Exit if property configuration fails
+        }
+
+        SlingClient slingClient = new SlingClient(conn, props, new QueryUrl(conn));
+        PageTool pageTool = new PageTool(parentNodePath, conn, slingClient);
+
+        pageTool.setProperties(props);
+        pageTool.setIsPropertyPath(cmd.hasOption('P'));
+        pageTool.executeOperation();
+    }
+
+    private static Options buildOptions() {
+        Options options = new Options();
+        options.addOption("u", true, "Credentials: Username for AEM (default: admin)")
+                .addOption("w", true, "Credentials: Password for AEM (default: admin)")
+                .addOption("l", true, "Credentials: Username:password combo (e.g., admin:admin)")
+                .addOption("h", true, "Server: AEM hostname (default: localhost)")
+                .addOption("t", true, "Server: AEM port (default: 4502)")
+                .addOption("s", true, "Server: Hostname:port combo (e.g., localhost:4502)")
+                .addOption("c", true, "Credentials: Full combo (e.g., admin:admin@localhost:4502)")
+                .addOption("S", false, "Use HTTPS instead of HTTP")
+                .addOption("C", false, "Bypass SSL certificate checking")
+                .addOption("n", true, "Parent node path for updates (required)")
+                .addOption("m", "match", true, "Match nodes with property=value (multiple allowed)")
+                .addOption("p", true, "Property to update (property=value, multiple allowed)")
+                .addOption("i", "copy-from", true, "Property to copy from (use with -o)")
+                .addOption("o", "copy-to", true, "Property to copy to (use with -i)")
+                .addOption("P", "page", false, "Restrict to cq:Page nodes (default: all node types)") // Changed from 'N'
+                .addOption("r", "replace", true, "Replace string in -p property with this value")
+                .addOption("d", "delete", true, "Property to delete (property=value, multiple allowed)")
+                .addOption("f", "find", true, "Search criteria (node_name or property=value)")
+                .addOption("y", false, "Perform a dry run (no updates)")
+                .addOption("x", false, "Verbose output");
+        return options;
+    }
+
+    private static CommandLine parseCommandLine(Options options, String[] args) {
         CommandLineParser parser = new GnuParser();
         try {
             CommandLine cmd = parser.parse(options, args);
+            if (!validateOptions(cmd)) {
+                printHelp(options);
+                return null;
+            }
+            return cmd;
+        } catch (ParseException e) {
+            Output.warn("Error parsing options: " + e.getMessage());
+            if (verbose) {
+                e.printStackTrace();
+            }
+            printHelp(options);
+            return null;
+        }
+    }
 
-            if (!cmd.hasOption('n') && !cmd.hasOption('p')) {
-                PageToolApp.printHelp(options);
-                return;
-            }
-            if (!cmd.hasOption('n')) {
-                System.out.println("Parent node (-n) is a required argument.");
-                return;
-            }
-            if ((cmd.hasOption('i') && !cmd.hasOption("o")) || (!cmd.hasOption("i") && cmd.hasOption("o"))) {
-                System.out.println("A 'copy from' property (-i) must be specified together with a 'copy to' property (-o).");
-                return;
-            }
-            if (!cmd.hasOption('p') && !cmd.hasOption('d') && !cmd.hasOption("i") && !cmd.hasOption('f')) {
-                System.out.println("Property to update or delete (-p or -d) is a required argument.");
-                return;
-            }
-            if (cmd.hasOption('S')) {
-                PageToolApp.secure = true;
-            }
-            if (cmd.hasOption('C')) {
-                PageToolApp.bypassSSL = true;
-            }
-            if (cmd.hasOption('x')) {
-                PageToolApp.verbose = true;
-            }
-            if (cmd.hasOption('y')) {
-                PageToolApp.dryRun = true;
-            }
+    private static boolean validateOptions(CommandLine cmd) {
+        if (!cmd.hasOption('n')) {
+            Output.warn("Parent node (-n) is required.");
+            return false;
+        }
+        if (!cmd.hasOption('p') && !cmd.hasOption('d') && !cmd.hasOption("i") && !cmd.hasOption('f')) {
+            Output.warn("At least one operation (-p, -d, -i, or -f) is required.");
+            return false;
+        }
+        if ((cmd.hasOption('i') && !cmd.hasOption("o")) || (!cmd.hasOption("i") && cmd.hasOption("o"))) {
+            Output.warn("Both 'copy from' (-i) and 'copy to' (-o) must be specified together.");
+            return false;
+        }
+        return true;
+    }
 
-            CrxConnection conn = CrxConnectionFactory.getCrxConnection(cmd);
+    /**
+     * Configures OperationProperties from command-line options, handling exceptions gracefully.
+     *
+     * @param props   The properties object to configure
+     * @param cmd     Parsed command line
+     * @param options Available CLI options for descriptions
+     * @return True if configuration succeeds, false if a fatal error occurs
+     */
+    private static boolean configureProperties(OperationProperties props, CommandLine cmd, Options options) {
+        if (cmd.hasOption('P')) {
+            props.setCqPageType(true);
+        }
 
-            PageTool nodeTool = new PageTool(cmd.getOptionValue('n'));
-            nodeTool.setConnection(conn);
-            OperationProperties props = new OperationProperties();
-
-            if (cmd.hasOption('N')) {
-                props.setCqPageType(false);
-            }
+        try {
             if (cmd.hasOption('m')) {
-                props.setMatchingProperties(cmd.getOptionValues('m'));
+                setProperty(props::setMatchingProperties, cmd.getOptionValues('m'), options.getOption("m"), "matching");
             }
             if (cmd.hasOption('f')) {
                 props.setSearchValue(cmd.getOptionValues('f'));
@@ -96,49 +136,78 @@ public class PageToolApp {
             if (cmd.hasOption('o')) {
                 props.setCopyToProperties(cmd.getOptionValues('o'));
             }
-            nodeTool.setIsPropertyPath(cmd.hasOption('P'));
             if (cmd.hasOption('p') && !cmd.hasOption('r')) {
-                props.setUpdateProperties(cmd.getOptionValues('p'));
+                String[] updateProps = cmd.getOptionValues('p');
+                setProperty(props::setUpdateProperties, updateProps, options.getOption("p"), "update");
+                if (cmd.hasOption('f')) {
+                    ArrayList<Property> updateList = props.getUpdateProperties();
+                    for (Property prop : updateList) {
+                        if (prop.getValue() != null && prop.getValue().matches("^\\[.*\\]$")) {
+                            String val = prop.getValue().replaceAll("^\\[|\\]$", "");
+                            prop.setValues(new String[]{val});
+                            prop.setMulti(true);
+                        }
+                    }
+                }
             }
             if (cmd.hasOption('r')) {
                 props.setPropertyValueReplacement(cmd.getOptionValues('p'), cmd.getOptionValues('r'));
             }
             if (cmd.hasOption('d')) {
-                props.setDeleteProperties(cmd.getOptionValues('d'));
+                setProperty(props::setDeleteProperties, cmd.getOptionValues('d'), options.getOption("d"), "delete");
             }
-
-            nodeTool.setProperties(props);
-            nodeTool.run();
         } catch (Exception e) {
-            System.out.println("Error parsing options (" + e.toString() + ")");
-            if (PageToolApp.verbose) {
+            Output.warn("Failed to configure properties: " + e.getMessage());
+            if (verbose) {
                 e.printStackTrace();
             }
+            return false;
         }
-
+        return true;
     }
 
     /**
-     * Prints help message to the standard out
-     * @param options Command line options
+     * Helper method to set a property with exception handling and descriptive error messages.
+     *
+     * @param setter     The setter method to call (e.g., props::setMatchingProperties)
+     * @param values     The values to set
+     * @param option     The CLI option for context
+     * @param propertyType The type of property (e.g., "matching", "update")
+     * @throws InvalidPropertyException If the property format is invalid
+     * @throws Exception                For other unexpected errors
      */
-    public static void printHelp(Options options) {
+    private static void setProperty(PropertySetter setter, String[] values, Option option, String propertyType) throws Exception {
+        try {
+            setter.set(values);
+        } catch (InvalidPropertyException e) {
+            String message = String.format("Invalid %s property '%s': %s (%s)",
+                    propertyType, e.getMessage(), option.getDescription(), "provided: " + String.join(", ", values));
+            throw new InvalidPropertyException(message, e);
+        }
+    }
+
+    private static void printHelp(Options options) {
         int cols = 80;
         try {
-            String colVal = Util.execCommand(new String[] { "bash", "-c", "tput cols 2> /dev/tty" });
-            int calcCols = Integer.parseInt(colVal);
+            String colVal = Util.execCommand(new String[]{"bash", "-c", "tput cols 2> /dev/tty"});
+            int calcCols = Integer.parseInt(colVal.trim());
             if (calcCols > cols) {
                 cols = calcCols;
             }
-        } catch (Exception e) {
-            // do nothing
+        } catch (Exception ignored) {
+            // Default to 80 if tput fails
         }
-
         PrintWriter pw = new PrintWriter(System.out);
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp(pw, cols, "pagetool -n /path/to/parent/page -p property=value [-p p=v ...] [OPTIONS]", "Available options:", options, 2, 4, null);
+        formatter.printHelp(pw, cols, "pagetool -n /path/to/parent/page -p property=value [-p p=v ...] [OPTIONS]",
+                "Available options:", options, 2, 4, null);
         pw.flush();
         pw.close();
+    }
+
+    @FunctionalInterface
+    private interface PropertySetter {
+        void set(String[] values) throws Exception;
     }
 
 }

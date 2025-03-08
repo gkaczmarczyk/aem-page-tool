@@ -1,7 +1,8 @@
 package co.acu.pagetool.crx;
 
 /**
- * Connection class to manage the connection information for the AEM host
+ * Connection class to manage the connection information for the AEM host.
+ *
  * @author Gregory Kaczmarczyk
  */
 public class CrxConnection {
@@ -11,70 +12,54 @@ public class CrxConnection {
     static final String DEFAULT_HOST = "localhost";
     static final String DEFAULT_PORT = "4502";
 
-    private String username;
-    private String password;
-    private String hostname;
-    private String port;
+    private final String username;
+    private final String password;
+    private final String hostname;
+    private final String port;
+    private final boolean secure;
 
     public CrxConnection() {
         this.username = DEFAULT_USER;
         this.password = DEFAULT_PASSWORD;
         this.hostname = DEFAULT_HOST;
         this.port = DEFAULT_PORT;
+        this.secure = false; // Default to HTTP
     }
 
     public CrxConnection(String username, String password) {
-        this.username = (username == null || username.equals("")) ? DEFAULT_USER : username;
-        this.password = (password == null || password.equals("")) ? DEFAULT_PASSWORD : password;
+        this.username = (username == null || username.isEmpty()) ? DEFAULT_USER : username;
+        this.password = (password == null || password.isEmpty()) ? DEFAULT_PASSWORD : password;
         this.hostname = DEFAULT_HOST;
         this.port = DEFAULT_PORT;
+        this.secure = false;
     }
 
-    public CrxConnection(String username, String password, String hostname, String port) {
-        this.username = (username == null || username.equals("")) ? DEFAULT_USER : username;
-        this.password = (password == null || password.equals("")) ? DEFAULT_PASSWORD : password;
-        this.hostname = (hostname == null || hostname.equals("")) ? DEFAULT_HOST : hostname;
-        this.port = (port == null || port.equals("")) ? DEFAULT_PORT : port;
+    public CrxConnection(String username, String password, String hostname, String port, boolean secure) {
+        this.username = (username == null || username.isEmpty()) ? DEFAULT_USER : username;
+        this.password = (password == null || password.isEmpty()) ? DEFAULT_PASSWORD : password;
+        this.hostname = (hostname == null || hostname.isEmpty()) ? DEFAULT_HOST : hostname;
+        this.port = (port == null || port.isEmpty()) ? DEFAULT_PORT : port;
+        this.secure = secure;
     }
 
     public String getUsername() {
         return username;
     }
 
-    public void setUsername(String username) {
-        if (username != null && !username.equals("")) {
-            this.username = username;
-        }
-    }
-
     public String getPassword() {
         return password;
-    }
-
-    public void setPassword(String password) {
-        if (password != null && !password.equals("")) {
-            this.password = password;
-        }
     }
 
     public String getHostname() {
         return hostname;
     }
 
-    public void setHostname(String hostname) {
-        if (hostname != null && !hostname.equals("")) {
-            this.hostname = hostname;
-        }
-    }
-
     public String getPort() {
         return port;
     }
 
-    public void setPort(String port) {
-        if (port != null && !port.equals("")) {
-            this.port = port;
-        }
+    public boolean isSecure() {
+        return secure;
     }
 
 }

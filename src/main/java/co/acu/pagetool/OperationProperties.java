@@ -45,7 +45,7 @@ public class OperationProperties {
 
     private boolean searchOnly = false;
 
-    private boolean cqPageType = true;
+    private boolean cqPageType = false;
 
     /**
      * Get the set list of matching properties
@@ -94,7 +94,15 @@ public class OperationProperties {
         }
 
         try {
-            setMatchingProperties(properties.toArray(new String[properties.size()]));
+            ArrayList<Property> propList = getPropertiesAsList(properties.toArray(new String[0]));
+            // Mark properties with array syntax (e.g., [value]) as multi-valued
+            for (Property prop : propList) {
+                if (prop.getValue() != null && !prop.getValue().isEmpty() && !prop.isMulti()) {
+                    prop.setValues(new String[]{prop.getValue()});
+                    prop.setMulti(true); // Flag as String[] for search
+                }
+            }
+            setMatchingProperties(propList);
         } catch (InvalidPropertyException e) {
             System.out.println("Error setting the search property (" + e.toString() + ").");
         }

@@ -29,10 +29,10 @@ Credentials can be specified in any manner depending on your needs with any of t
 
 ##### Working with cq:Page nodes
 
-By default, matches are performed on pages with a JCR primary type of "cq:Page". If you wish to leave the type unspecified, you can use the `-N` flag:
+By default, matches are performed on pages with all nodes. If you wish to restrict queries to the jcr:content nodes of cq:Page nodes, then specify `-P` flag:
 
 ```
-java -jar aem-page-tool.jar -n /content/path/to/my/page -N -f mynode
+java -jar aem-page-tool.jar -n /content/path/to/my/page -P -f mynode
 ```
 
 ## <a id=#search-option>Searching</a>

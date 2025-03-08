@@ -1,210 +1,115 @@
 package co.acu.pagetool.crx;
 
 import co.acu.pagetool.PageToolApp;
+import co.acu.pagetool.util.Output;
 
-import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
+/**
+ * Utility class for constructing URLs for Sling API queries and updates in AEM.
+ *
+ * @author Gregory Kaczmarczyk
+ */
 public class QueryUrl {
 
-    static final String QUERY_PATH = "/bin/querybuilder.json";
+    private static final String QUERY_PATH = "/bin/querybuilder.json";
+    private static final int DEFAULT_LIMIT = 1000;
+    private static final int DEFAULT_NODE_DEPTH = 10;
+    private static final String DEFAULT_HITS_TYPE = "selective";
+    private static final String DEFAULT_HITS_PROPERTIES = "jcr:path";
 
-    /**
-     * The number of maximum results to display per request
-     */
-    int limit = 1000;
-
-    /**
-     * The hierarchical depth to search for nodes/Pages
-     */
-    int nodeDepth = 5;
-
-    /**
-     * The type of output from each node
-     */
-    String hitsType = "selective";
-
-    /**
-     * The node properties to output in the JSON response
-     */
-    String hitsProperties = "jcr:path";
-
-    CrxConnection conn;
-    Property nodeType;
-    boolean isCqPageType = true;
+    private final CrxConnection conn;
+    private final int limit;
+    private final int nodeDepth;
+    private final String hitsType;
+    private final String hitsProperties;
+    private boolean isCqPageType;
 
     public QueryUrl(CrxConnection conn) {
-        this.conn = conn;
-        nodeType = new Property("type", "cq:Page");
+        this.conn = Objects.requireNonNull(conn, "CrxConnection must not be null");
+        this.limit = DEFAULT_LIMIT;
+        this.nodeDepth = DEFAULT_NODE_DEPTH;
+        this.hitsType = DEFAULT_HITS_TYPE;
+        this.hitsProperties = DEFAULT_HITS_PROPERTIES;
+        this.isCqPageType = false;
     }
 
-    /**
-     * Get the Sling URL which includes the scheme & hostname
-     */
-    private StringBuilder getHostUrl() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(PageToolApp.secure ? SlingClient.SCHEME_SECURE : SlingClient.SCHEME)
+    private StringBuilder buildBaseUrl() {
+        return new StringBuilder()
+                .append(conn.isSecure() ? SlingClient.SCHEME_SECURE : SlingClient.SCHEME)
                 .append("://")
                 .append(conn.getHostname())
                 .append(':')
                 .append(conn.getPort());
-
-        return sb;
     }
 
-    /**
-     * Builds all of the extra parameters that are passed to the Sling query
-     * @param path
-     * @param properties
-     * @param nodes
-     * @return
-     */
-    private StringBuilder getQueryPath(String path, ArrayList<Property> properties, ArrayList<String> nodes) {
-        StringBuilder sb = new StringBuilder();
+    private StringBuilder buildQueryParameters(String path, List<Property> properties, List<String> nodes) {
+        StringBuilder sb = new StringBuilder()
+                .append(QUERY_PATH)
+                .append("?path=").append(path)
+                .append("&p.limit=").append(limit)
+                .append("&p.hits=").append(hitsType)
+                .append("&p.properties=").append(hitsProperties)
+                .append("&p.nodedepth=").append(nodeDepth);
 
-        sb.append(QUERY_PATH)
-                .append('?')
-                .append("path")
-                .append('=')
-                .append(path)
-                .append("&p.limit=")
-                .append(limit)
-                .append("&p.hits=")
-                .append(hitsType)
-                .append("&p.properties=")
-                .append(hitsProperties)
-                .append("&p.nodedepth=")
-                .append(nodeDepth);
-
-        if (isCqPageType) {
-            sb.append('&')
-                    .append(nodeType.getName())
-                    .append('=')
-                    .append(nodeType.getValue());
-        }
-
-        if (properties != null) {
-            int propCtr = (properties.size() > 1) ? 1 : -1;
+        if (properties != null && !properties.isEmpty()) {
+            int propCtr = properties.size() > 1 ? 1 : -1;
             for (Property prop : properties) {
-                String propKey = ((propCtr < 1) ? "" : propCtr++ + "_") + "property";
-                sb.append('&')
-                        .append(propKey)
-                        .append('=');
-
+                String propKey = (propCtr < 1 ? "" : propCtr++ + "_") + "property";
+                sb.append('&').append(propKey).append('=');
                 if (isCqPageType) {
                     sb.append("jcr:content/");
                 }
-
+                sb.append(prop.getName());
                 if (!prop.isMulti()) {
-                    sb.append(prop.getName())
-                            .append('&')
-                            .append(propKey)
-                            .append(".value=")
-                            .append(prop.getValue());
+                    sb.append('&').append(propKey).append(".value=").append(prop.getValue());
                 } else {
-                    // if we've got a multi-value property here, then we're assuming it's a replacement & we only need
-                    // to check for the existence of the property
-                    sb.append(prop.getName())
-                            .append('&')
-                            .append(propKey)
-                            .append(".operation=exists");
+                    sb.append('&').append(propKey).append(".operation=contains")
+                            .append('&').append(propKey).append(".value=").append(prop.getValues()[0]);
+                    if (PageToolApp.verbose) {
+                        Output.info("Searching " + prop.getName() + " for value: " + prop.getValues()[0]);
+                    }
                 }
             }
         }
 
-        if (nodes != null) {
-            sb.append("&nodename=")
-                    .append(nodes.get(0));
+        if (nodes != null && !nodes.isEmpty()) {
+            sb.append("&nodename=").append(nodes.get(0));
         }
 
         return sb;
     }
 
-    /**
-     * Build the Sling URL
-     * @param path The top level JCR node path which should be searched
-     * @param properties
-     * @param nodes A list of node names that are being searched
-     * @return
-     */
-    public String buildUrl(String path, ArrayList<Property> properties, ArrayList<String> nodes) {
-        return buildUrl(true, path, properties, nodes);
-    }
-
-    /**
-     * Build the Sling URL
-     * @param path The top level JCR node path which should be searched
-     * @param properties
-     * @param nodes A list of node names that are being searched
-     * @param cqPageType Whether or not the node type is a cq:Page
-     * @return
-     */
-    public String buildUrl(String path, ArrayList<Property> properties, ArrayList<String> nodes, boolean cqPageType) {
+    public String buildUrl(String path, List<Property> properties, List<String> nodes, boolean isQuery, boolean cqPageType, String copyProperty) {
         this.isCqPageType = cqPageType;
-
-        return buildUrl(true, path, properties, nodes);
-    }
-
-    /**
-     * Build the Sling URL
-     * @param isQuery Whether or not this Sling request is a query
-     * @param path The top level JCR node path which should be searched
-     * @param properties
-     * @return
-     */
-    public String buildUrl(boolean isQuery, String path, ArrayList<Property> properties) {
-        return buildUrl(isQuery, path, properties, null, null);
-    }
-
-    /**
-     * Build the Sling URL
-     * @param isQuery Whether or not this Sling request is a query
-     * @param path The top level JCR node path which should be searched
-     * @param properties
-     * @param nodes A list of node names that are being searched
-     * @return
-     */
-    public String buildUrl(boolean isQuery, String path, ArrayList<Property> properties, ArrayList<String> nodes) {
-        return buildUrl(isQuery, path, properties, nodes, null);
-    }
-
-    /**
-     * Build the Sling URL
-     * @param path The top level JCR node path which should be searched
-     * @param copyProperty
-     * @return
-     */
-    public String buildUrl(String path, String copyProperty) {
-        return buildUrl(false, path, null, null, copyProperty);
-    }
-
-    /**
-     * Build the Sling URL
-     * @param isQuery Whether or not this Sling request is a query
-     * @param path The top level JCR node path which should be searched
-     * @param properties
-     * @param nodes A list of node names that are being searched
-     * @param copyProperty The name of the property that is being copied
-     * @return
-     */
-    public String buildUrl(boolean isQuery, String path, ArrayList<Property> properties, ArrayList<String> nodes, String copyProperty) {
-        StringBuilder sb = getHostUrl();
+        StringBuilder sb = buildBaseUrl();
 
         if (isQuery) {
-            sb.append(getQueryPath(path, properties, nodes));
+            sb.append(buildQueryParameters(path, properties, nodes));
         } else {
             sb.append(path);
-
-            if (this.isCqPageType) {
+            if (isCqPageType) {
                 sb.append("/jcr:content");
             }
-
-            if (copyProperty != null && !copyProperty.equals("")) {
+            if (copyProperty != null && !copyProperty.isEmpty()) {
                 sb.append("/").append(copyProperty);
             }
         }
 
         return sb.toString();
+    }
+
+    public String buildUrl(String path, List<Property> properties, List<String> nodes, boolean cqPageType) {
+        return buildUrl(path, properties, nodes, true, cqPageType, null);
+    }
+
+    public String buildUrl(boolean isQuery, String path, List<Property> properties) {
+        return buildUrl(path, properties, null, isQuery, isCqPageType, null);
+    }
+
+    public String buildUrl(String path, String copyProperty) {
+        return buildUrl(path, null, null, false, isCqPageType, copyProperty);
     }
 
 }
