@@ -66,9 +66,9 @@ public class PageToolApp {
                 .addOption("p", true, "Property to update (property=value, multiple allowed)")
                 .addOption("i", "copy-from", true, "Property to copy from (use with -o)")
                 .addOption("o", "copy-to", true, "Property to copy to (use with -i)")
-                .addOption("P", "page", false, "Restrict to cq:Page nodes (default: all node types)") // Changed from 'N'
+                .addOption("P", "page", false, "Restrict to cq:Page nodes (default: all node types)")
                 .addOption("r", "replace", true, "Replace string in -p property with this value")
-                .addOption("d", "delete", true, "Property to delete (property=value, multiple allowed)")
+                .addOption("d", "delete", true, "Property to delete")
                 .addOption("f", "find", true, "Search criteria (node_name or property=value)")
                 .addOption("y", false, "Perform a dry run (no updates)")
                 .addOption("x", false, "Verbose output");

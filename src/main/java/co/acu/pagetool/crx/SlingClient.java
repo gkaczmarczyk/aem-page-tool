@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * A client for interacting with the Apache Sling API in Adobe Experience Manager (AEM).
@@ -126,10 +127,17 @@ public class SlingClient {
     }
 
     public void queryPages(String path) throws IOException {
-        List<Property> propertiesList = properties.getPropertyValueReplacementAsList() != null
-                ? properties.getPropertyValueReplacementAsList()
-                : properties.getMatchingProperties();
-        String url = queryUrl.buildUrl(path, propertiesList, properties.getMatchingNodes(), properties.isCqPageType());
+        List<Property> propertiesList = null;
+        if (properties.getDeleteProperties() != null && !properties.getDeleteProperties().isEmpty()) {
+            propertiesList = properties.getDeleteProperties().stream()
+                    .map(propName -> new Property(propName, ""))
+                    .collect(Collectors.toList());
+        } else if (properties.getPropertyValueReplacementAsList() != null) {
+            propertiesList = properties.getPropertyValueReplacementAsList();
+        } else if (properties.getMatchingProperties() != null && !properties.getMatchingProperties().isEmpty()) {
+            propertiesList = properties.getMatchingProperties();
+        }
+        String url = queryUrl.buildUrl(path, propertiesList, properties.getMatchingNodes(), true, properties.isCqPageType(), null);
         if (PageToolApp.verbose) {
             Output.ninfo("Querying Sling URL: "); Output.nhl(url); Output.line();
         }
@@ -272,6 +280,22 @@ public class SlingClient {
         List<NameValuePair> params = new ArrayList<>();
         params.add(new BasicNameValuePair(replacement.getName(), updatedValue));
         executePost(queryUrl.buildUrl(path, ""), params);
+    }
+
+    public void deleteProperties(String path) throws IOException {
+        if (properties.getDeleteProperties() == null || properties.getDeleteProperties().isEmpty()) {
+            Output.nwarn("No properties configured for deletion.");
+            return;
+        }
+        String url = queryUrl.buildUrl(path, "");
+        List<NameValuePair> params = new ArrayList<>();
+        for (String prop : properties.getDeleteProperties()) {
+            params.add(new BasicNameValuePair(prop + SlingPostConstants.SUFFIX_DELETE, "true"));
+        }
+        executePost(url, params);
+        if (PageToolApp.verbose && lastStatusCode == 200) {
+            Output.info("Successfully deleted properties for " + path + " (status code: " + lastStatusCode + ")");
+        }
     }
 
     public int getLastStatusCode() {

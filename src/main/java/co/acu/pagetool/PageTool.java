@@ -43,7 +43,7 @@ public class PageTool {
             if (properties.isSearchOnly()) {
                 Output.info("Performing search operation...");
                 JsonArray hits = queryPages(parentNodePath);
-                Output.hl("Found " + hits.size() + " page" + (hits.size() != 1 ? "s" : "") + ".");
+                Output.hl("Found " + hits.size() + (properties.isCqPageType() ? " page" : " node") + (hits.size() != 1 ? "s" : "") + ".");
                 for (JsonElement hit : hits) {
                     String path = hit.getAsJsonObject().get("jcr:path").getAsString();
                     Output.info(path); // One path per line, no "Hit: "
@@ -62,14 +62,14 @@ public class PageTool {
 
     private void processPages(String path) throws IOException {
         JsonArray pages = queryPages(path);
-        Output.info("Found " + pages.size() + " page" + (pages.size() != 1 ? "s" : "") + ".");
+        Output.info("Found " + pages.size() + (properties.isCqPageType() ? " page" : " node") + (pages.size() != 1 ? "s" : "") + ".");
         if (PageToolApp.dryRun) {
             Output.hl("Dry run enabled - no updates will be performed.");
             return;
         }
         for (JsonElement page : pages) {
             String pagePath = page.getAsJsonObject().get("jcr:path").getAsString();
-            Output.ninfo("Processing page: " + pagePath);
+            Output.ninfo("Processing " + (properties.isCqPageType() ? "page: " : "node: ") + pagePath);
             if (properties.getUpdateProperties() != null) {
                 slingClient.updatePage(pagePath);
             }
@@ -81,6 +81,13 @@ public class PageTool {
                     slingClient.replacePropertyValue(pagePath);
                 } catch (SlingClientException e) {
                     Output.nwarn("Failed to replace property value: " + e.getMessage());
+                }
+            }
+            if (properties.getDeleteProperties() != null) {
+                try {
+                    slingClient.deleteProperties(pagePath);
+                } catch (IOException e) {
+                    Output.nwarn("Failed to delete properties: " + e.getMessage());
                 }
             }
             Output.line();

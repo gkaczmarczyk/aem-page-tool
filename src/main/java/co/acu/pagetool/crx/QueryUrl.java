@@ -63,8 +63,13 @@ public class QueryUrl {
                 }
                 sb.append(prop.getName());
                 if (!prop.isMulti()) {
-                    sb.append('&').append(propKey).append(".value=").append(prop.getValue());
-                } else {
+                    sb.append('&');
+                    if (prop.getValue() != null && !prop.getValue().isEmpty()) {
+                        sb.append(propKey).append(".value=").append(prop.getValue());
+                    } else {
+                        sb.append("property.operation=exists");
+                    }
+                } else if (prop.isMulti() && prop.getValues() != null && prop.getValues().length > 0) {
                     sb.append('&').append(propKey).append(".operation=contains")
                             .append('&').append(propKey).append(".value=").append(prop.getValues()[0]);
                     if (PageToolApp.verbose) {
