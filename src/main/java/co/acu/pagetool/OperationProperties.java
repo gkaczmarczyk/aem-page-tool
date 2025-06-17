@@ -43,6 +43,8 @@ public class OperationProperties {
      */
     private ArrayList<String> deleteProperties;
 
+    private Property createNode = null;
+
     private boolean searchOnly = false;
 
     private boolean cqPageType = false;
@@ -72,7 +74,27 @@ public class OperationProperties {
         if (PageToolApp.verbose) {
             System.out.println("  Properties to match:");
         }
-        this.matchingProperties = getPropertiesAsList(properties);
+        ArrayList<String> propStrings = new ArrayList<>();
+        for (String prop : properties) {
+            if (PageToolApp.verbose) {
+                System.out.println("    Processing -m value: " + prop);
+            }
+            if (prop.contains("=")) { // Special handling for nodeName=type (e.g. jcr:content=cq:PageContent)
+                int lastEqualsIndex = prop.lastIndexOf('=');
+                String name = prop.substring(0, lastEqualsIndex).trim();
+                String val = prop.substring(lastEqualsIndex + 1).trim();
+                if ("jcr:content".equals(name)) {
+                    if (matchingNodes == null) {
+                        matchingNodes = new ArrayList<>();
+                    }
+                    matchingNodes.add(name);
+                    propStrings.add("jcr:primaryType=" + val);
+                    continue;
+                }
+            }
+            propStrings.add(prop);
+        }
+        this.matchingProperties = getPropertiesAsList(propStrings.toArray(new String[0]));
     }
 
     public void setSearchValue(String[] searchValues) {
@@ -95,7 +117,7 @@ public class OperationProperties {
 
         try {
             ArrayList<Property> propList = getPropertiesAsList(properties.toArray(new String[0]));
-            // Mark properties with array syntax (e.g., [value]) as multi-valued
+            // Mark properties with array syntax (e.g. [value]) as multi-valued
             for (Property prop : propList) {
                 if (prop.getValue() != null && !prop.getValue().isEmpty() && !prop.isMulti()) {
                     prop.setValues(new String[]{prop.getValue()});
@@ -227,6 +249,28 @@ public class OperationProperties {
             }
             this.deleteProperties.add(prop);
         }
+    }
+
+    public Property getCreateNode() {
+        return createNode;
+    }
+
+    public void setCreateNode(String[] nodes) throws InvalidPropertyException {
+        if (nodes == null || nodes.length == 0) {
+            throw new InvalidPropertyException("Node creation requires at least one node specification");
+        }
+        if (PageToolApp.verbose) {
+            System.out.println("  Node to create:");
+        }
+        Property node = Property.getProperty(nodes[0]);
+        if (node == null) {
+            throw new InvalidPropertyException("Invalid node format: " + nodes[0]);
+        }
+        if (PageToolApp.verbose) {
+            System.out.println("    " + node.getName() + " = " + node.getValue());
+        }
+        this.createNode = node;
+        this.searchOnly = false;
     }
 
     /**

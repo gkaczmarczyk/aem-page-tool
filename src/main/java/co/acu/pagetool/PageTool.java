@@ -46,7 +46,7 @@ public class PageTool {
                 Output.hl("Found " + hits.size() + (properties.isCqPageType() ? " page" : " node") + (hits.size() != 1 ? "s" : "") + ".");
                 for (JsonElement hit : hits) {
                     String path = hit.getAsJsonObject().get("jcr:path").getAsString();
-                    Output.info(path); // One path per line, no "Hit: "
+                    Output.info(path);
                 }
             } else {
                 Output.info("Performing update operation...");
@@ -65,6 +65,9 @@ public class PageTool {
         Output.info("Found " + pages.size() + (properties.isCqPageType() ? " page" : " node") + (pages.size() != 1 ? "s" : "") + ".");
         if (PageToolApp.dryRun) {
             Output.hl("Dry run enabled - no updates will be performed.");
+            for (JsonElement page : pages) {
+                Output.info(" - " + page.getAsJsonObject().get("jcr:path").getAsString());
+            }
             return;
         }
         for (JsonElement page : pages) {
@@ -88,6 +91,13 @@ public class PageTool {
                     slingClient.deleteProperties(pagePath);
                 } catch (IOException e) {
                     Output.nwarn("Failed to delete properties: " + e.getMessage());
+                }
+            }
+            if (properties.getCreateNode() != null) {
+                try {
+                    slingClient.createNode(pagePath);
+                } catch (IOException e) {
+                    Output.nwarn("Failed to create node: " + e.getMessage());
                 }
             }
             Output.line();

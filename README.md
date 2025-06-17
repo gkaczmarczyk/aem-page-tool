@@ -78,6 +78,16 @@ if you wish to create a property in a node nested within the `jcr:content` node,
 java -jar aem-page-tool.jar -n /content/path/to/my/page -p par/subnode/prop1=val1
 ```
 
+##### Creating Nodes
+
+You can create a new node under nodes that match specific properties. Use the `-a` option to specify the node name and its `jcr:primaryType` (e.g. `newNode=nt:unstructured`). This requires the `-m` option to identify the parent nodes where the new node will be created. For example, to create a node `newNode` under `/jcr:content` nodes with `jcr:content=cq:PageContent`:
+
+```
+java -jar aem-page-tool.jar -n /content/path/to/my/page -m jcr:content=cq:PageContent -a newNode=nt:unstructured
+```
+
+This creates `/content/path/to/my/page/jcr:content/newNode` with `jcr:primaryType=nt:unstructured` for each matched node.
+
 ##### Deleting Properties
 
 Rather than updating properties, you can also delete properties that the page may contain.

@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 
 /**
  * A client for interacting with the Apache Sling API in Adobe Experience Manager (AEM).
- * Provides methods to query, update, copy, and replace properties of AEM pages.
+ * Provides methods to query, update, copy, replace properties, and create nodes.
  *
  * @author Gregory Kaczmarczyk
  */
@@ -116,7 +116,7 @@ public class SlingClient {
             try (CloseableHttpResponse response = client.execute(httpPost, context)) {
                 lastStatusCode = response.getStatusLine().getStatusCode();
                 EntityUtils.consume(response.getEntity());
-                if (lastStatusCode == 200 && PageToolApp.verbose) {
+                if ((lastStatusCode == 200 || lastStatusCode == 201) && PageToolApp.verbose) {
                     Output.info("Successfully posted to " + url + " (status code: " + lastStatusCode + ")");
                 }
             }
@@ -295,6 +295,23 @@ public class SlingClient {
         executePost(url, params);
         if (PageToolApp.verbose && lastStatusCode == 200) {
             Output.info("Successfully deleted properties for " + path + " (status code: " + lastStatusCode + ")");
+        }
+    }
+
+    public void createNode(String parentPath) throws IOException {
+        Property node = properties.getCreateNode();
+        if (node == null) {
+            Output.nwarn("No node configured for creation.");
+            return;
+        }
+        String nodeName = node.getName();
+        String primaryType = node.getValue();
+        String url = queryUrl.buildUrl(parentPath, null) + "/" + nodeName;
+        List<NameValuePair> params = new ArrayList<>();
+        params.add(new BasicNameValuePair("jcr:primaryType", primaryType));
+        executePost(url, params);
+        if (PageToolApp.verbose && lastStatusCode == 201) {
+            Output.info("Successfully created node " + nodeName + " at " + parentPath + "/" + nodeName + " (status code: " + lastStatusCode + ")");
         }
     }
 

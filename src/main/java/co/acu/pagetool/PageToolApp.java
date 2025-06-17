@@ -54,11 +54,11 @@ public class PageToolApp {
         Options options = new Options();
         options.addOption("u", true, "Credentials: Username for AEM (default: admin)")
                 .addOption("w", true, "Credentials: Password for AEM (default: admin)")
-                .addOption("l", true, "Credentials: Username:password combo (e.g., admin:admin)")
+                .addOption("l", true, "Credentials: Username:password combo (e.g. admin:admin)")
                 .addOption("h", true, "Server: AEM hostname (default: localhost)")
                 .addOption("t", true, "Server: AEM port (default: 4502)")
-                .addOption("s", true, "Server: Hostname:port combo (e.g., localhost:4502)")
-                .addOption("c", true, "Credentials: Full combo (e.g., admin:admin@localhost:4502)")
+                .addOption("s", true, "Server: Hostname:port combo (e.g. localhost:4502)")
+                .addOption("c", true, "Credentials: Full combo (e.g. admin:admin@localhost:4502)")
                 .addOption("S", false, "Use HTTPS instead of HTTP")
                 .addOption("C", false, "Bypass SSL certificate checking")
                 .addOption("n", true, "Parent node path for updates (required)")
@@ -66,6 +66,7 @@ public class PageToolApp {
                 .addOption("p", true, "Property to update (property=value, multiple allowed)")
                 .addOption("i", "copy-from", true, "Property to copy from (use with -o)")
                 .addOption("o", "copy-to", true, "Property to copy to (use with -i)")
+                .addOption("a", "add-node", true, "Create node with name=jcr:primaryType (e.g. newNode=nt:unstructured)")
                 .addOption("P", "page", false, "Restrict to cq:Page nodes (default: all node types)")
                 .addOption("r", "replace", true, "Replace string in -p property with this value")
                 .addOption("d", "delete", true, "Property to delete")
@@ -99,12 +100,16 @@ public class PageToolApp {
             Output.warn("Parent node (-n) is required.");
             return false;
         }
-        if (!cmd.hasOption('p') && !cmd.hasOption('d') && !cmd.hasOption("i") && !cmd.hasOption('f')) {
-            Output.warn("At least one operation (-p, -d, -i, or -f) is required.");
+        if (!cmd.hasOption('p') && !cmd.hasOption('d') && !cmd.hasOption("i") && !cmd.hasOption('f') && !cmd.hasOption('a')) {
+            Output.warn("At least one operation (-p, -d, -i, -f, or -a) is required.");
             return false;
         }
         if ((cmd.hasOption('i') && !cmd.hasOption("o")) || (!cmd.hasOption("i") && cmd.hasOption("o"))) {
             Output.warn("Both 'copy from' (-i) and 'copy to' (-o) must be specified together.");
+            return false;
+        }
+        if (cmd.hasOption('a') && !cmd.hasOption('m')) {
+            Output.warn("Node creation (-a) requires matching properties (-m).");
             return false;
         }
         return true;
@@ -156,6 +161,9 @@ public class PageToolApp {
             if (cmd.hasOption('d')) {
                 setProperty(props::setDeleteProperties, cmd.getOptionValues('d'), options.getOption("d"), "delete");
             }
+            if (cmd.hasOption('a')) {
+                setProperty(props::setCreateNode, cmd.getOptionValues('a'), options.getOption("a"), "create node");
+            }
         } catch (Exception e) {
             Output.warn("Failed to configure properties: " + e.getMessage());
             if (verbose) {
@@ -169,10 +177,10 @@ public class PageToolApp {
     /**
      * Helper method to set a property with exception handling and descriptive error messages.
      *
-     * @param setter     The setter method to call (e.g., props::setMatchingProperties)
+     * @param setter     The setter method to call (e.g. props::setMatchingProperties)
      * @param values     The values to set
      * @param option     The CLI option for context
-     * @param propertyType The type of property (e.g., "matching", "update")
+     * @param propertyType The type of property (e.g. "matching", "update")
      * @throws InvalidPropertyException If the property format is invalid
      * @throws Exception                For other unexpected errors
      */
