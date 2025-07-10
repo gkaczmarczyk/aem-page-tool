@@ -3,6 +3,8 @@ package co.acu.pagetool.crx;
 import co.acu.pagetool.PageToolApp;
 import co.acu.pagetool.util.Output;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 
@@ -70,8 +72,9 @@ public class QueryUrl {
                         sb.append("property.operation=exists");
                     }
                 } else if (prop.isMulti() && prop.getValues() != null && prop.getValues().length > 0) {
-                    sb.append('&').append(propKey).append(".operation=contains")
-                            .append('&').append(propKey).append(".value=").append(prop.getValues()[0]);
+                    String likeValue = "%" + prop.getValues()[0] + "%";
+                    sb.append('&').append(propKey).append(".operation=like").append('&').append(propKey)
+                            .append(".value=").append(URLEncoder.encode(likeValue, StandardCharsets.UTF_8));
                     if (PageToolApp.verbose) {
                         Output.info("Searching " + prop.getName() + " for value: " + prop.getValues()[0]);
                     }
