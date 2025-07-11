@@ -70,7 +70,7 @@ class QueryUrlTest {
         when(property.isMulti()).thenReturn(true);
         when(property.getValues()).thenReturn(new String[]{"test1"});
         List<Property> properties = Collections.singletonList(property);
-        String expected = "http://localhost:4502/bin/querybuilder.json?path=/content/test&p.limit=1000&p.hits=selective&p.properties=jcr:path&p.nodedepth=10&property=maSortingTag&property.operation=contains&property.value=test1";
+        String expected = "http://localhost:4502/bin/querybuilder.json?path=/content/test&p.limit=1000&p.hits=selective&p.properties=jcr:path&p.nodedepth=10&property=maSortingTag&property.operation=like&property.value=%25test1%25";
         String result = queryUrl.buildUrl(path, properties, null, true, false, null);
         assertEquals(expected, result, "Query URL with multi-valued property should match");
     }
