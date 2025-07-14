@@ -214,11 +214,11 @@ public class SlingClient {
                             params.add(new BasicNameValuePair(updateProp.getName() + SlingPostConstants.TYPE_HINT_SUFFIX, "String[]"));
                             params.add(new BasicNameValuePair(updateProp.getName(), updateProp.getValues()[0]));
                         }
-                    }
-                } else if (updateProp.isMulti()) {
-                    params.add(new BasicNameValuePair(updateProp.getName() + SlingPostConstants.TYPE_HINT_SUFFIX, "String[]"));
-                    for (String value : updateProp.getValues()) {
-                        params.add(new BasicNameValuePair(updateProp.getName(), value));
+                    } else {
+                        params.add(new BasicNameValuePair(updateProp.getName() + SlingPostConstants.TYPE_HINT_SUFFIX, "String[]"));
+                        for (String value : updateProp.getValues()) {
+                            params.add(new BasicNameValuePair(updateProp.getName(), value));
+                        }
                     }
                 } else {
                     params.add(new BasicNameValuePair(updateProp.getName(), updateProp.getValue()));
