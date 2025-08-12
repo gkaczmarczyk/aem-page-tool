@@ -4,6 +4,8 @@
 .settings/
 target/
 
+aem-page-tool.jar
+
 #Intellij
 .idea/
 *.iml

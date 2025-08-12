@@ -2,16 +2,28 @@
 
 A small utility to ease in updating a single or many properties for any number of pages in AEM. This will update properties for the page(s) in the `jcr:content` node of the page itself.
 
+## Building
+
+This project uses the Maven Shade plugin to create a runnable Jar that includes all dependencies.  
+To build, you can simply run:
+
+```
+mvn clean package
+```
+
+This will produce the shaded JAR and place it **directly in the project’s root directory** as `aem-page-tool.jar` for immediate use.  
+You do **not** need to run `mvn clean install` unless you explicitly want to install the artifact into your local Maven repository.
+
 ### Usage
 
-* [AEM Authentication](#auth-option)
-* [cq:Page or Not](#cqpage-option)
-* [Searching](#search-option)
-* [Updating](#update-option)
-* [Copying](#copy-option)
-* [Other Options](#misc-option)
+* [AEM Authentication](#aem-authentication)
+* [cq:Page or Not](#cqpage-or-not)
+* [Searching](#searching)
+* [Updating](#updating)
+* [Copying](#copying)
+* [Other Options](#other-options)
 
-## <a id=#auth-option>AEM Authentication</a>
+## AEM Authentication
 
 ##### Passing credentials
 
@@ -25,7 +37,11 @@ Credentials can be specified in any manner depending on your needs with any of t
 - Specifying _only_ hostname: `-h hostname`
 - Specifying _only_ port: `-t portNum`
 
-## <a id=#cqpage-option>cq:Page or Not</a>
+**Note:**  
+When using the `-c` option, the value is parsed by splitting at the first `@` character to separate credentials from the server address. If your **password** contains an `@`, `:` or other special characters used as delimiters, you must:
+- Use the individual options (`-l`, `-s`, `-u`, `-w`, `-h`, `-t`) instead
+
+## cq:Page or Not
 
 ##### Working with cq:Page nodes
 
@@ -35,7 +51,7 @@ By default, matches are performed on pages with all nodes. If you wish to restri
 java -jar aem-page-tool.jar -n /content/path/to/my/page -P -f mynode
 ```
 
-## <a id=#search-option>Searching</a>
+## Searching
 
 ##### Simple Searching
 
@@ -53,7 +69,7 @@ java -jar aem-page-tool.jar -n /content/path/to/my/page -f mynode
 
 _Note: just as with sling queries, you can add a wildcard in the node name, i.e. `-f mynode_*`_
 
-## <a id=#update-option>Updating</a>
+## Updating
 
 Typical usage will include specifying the top-level node under which all pages that are expected to be updated fall or are descendents.
 Additionally, a single or set of properties are specified which are expected to be added or updated.
@@ -119,7 +135,7 @@ java -jar aem-page-tool.jar -n /content/path/to/my/page -p prop1=val1 -m hasProp
 
 So, only a page(s) that has the property `hasProp` with the value `currVal` will get updated.
 
-## <a id=#copy-option>Copying</a>
+## Copying
 
 ##### Copying Nodes
 
@@ -151,7 +167,7 @@ More deeply nested properties can be copied using the same technique as specifie
 java -jar aem-page-tool.jar -n /content/path/to/my/page -i par/subpar/prop1 -o par/subpar/prop2 -P
 ```
 
-## <a id=#misc-option>Other Options</a>
+## Other Options
 
 
 ##### Use secure connection (HTTPS)
