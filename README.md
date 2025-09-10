@@ -64,7 +64,7 @@ When using the `-c` option, the value is parsed by splitting at the first `@` ch
 
 ##### Working with cq:Page nodes
 
-By default, matches are performed on pages with all nodes. If you wish to restrict queries to the jcr:content nodes of cq:Page nodes, then specify `-P` flag:
+By default, matches are performed all nodes. If you wish to restrict queries to nodes with a jcr:primaryType of cq:Page, then specify `-P` flag:
 
 ```
 ./aempagetool.sh -n /content/path/to/my/page -P -f mynode
@@ -96,12 +96,20 @@ _Note: just as with sling queries, you can add a wildcard in the node name, i.e.
 
 ## Updating
 
-Typical usage will include specifying the top-level node under which all pages that are expected to be updated fall or are descendents.
+Typical usage will include specifying the top-level node under which all nodes that are expected to be updated fall or are descendents.
 Additionally, a single or set of properties are specified which are expected to be added or updated.
 
 ```
 ./aempagetool.sh -n /content/path/to/my/page -p prop1=val1 -p prop2=val2
 ```
+
+-or-
+
+```
+./aempagetool.sh -n /content/path/to/my/page -p prop1=val1 -p prop2=val2 -P
+```
+
+_Adding `-P` will make updates only to the `jcr:content` node of pages._
 
 ##### Multi-Value Properties
 
@@ -111,6 +119,12 @@ You can also save multi-value properties. To do so, surround your property value
 ./aempagetool.sh -n /content/path/to/my/page -p prop1=[val1] -p prop2=[val2,val3]
 ```
 
+```
+./aempagetool.sh -n /content/path/to/my/page -p prop1=[val1] -p prop2=[val2,val3] -P
+```
+
+_Adding `-P` will make updates only to the `jcr:content` node of pages._
+
 ##### Adding Properties
 
 if you wish to create a property in a node nested within the `jcr:content` node, you need to specify the entire path past the `jcr:content` node. For example, to create/update a property, `prop1`, in the path `/content/path/to/my/page/jcr:content/par/subnode` you would use the following command:
@@ -118,6 +132,14 @@ if you wish to create a property in a node nested within the `jcr:content` node,
 ```
 ./aempagetool.sh -n /content/path/to/my/page -p par/subnode/prop1=val1
 ```
+
+```
+./aempagetool.sh -n /content/path/to/my/page -p par/subnode/prop1=val1 -P
+```
+
+_Adding `-P` will add properties only to the `jcr:content` node of pages._
+
+**Please note:** this is the same syntax as the update properties syntax. This adds properties and overwrites existing properties.
 
 ##### Creating Nodes
 
@@ -131,11 +153,19 @@ This creates `/content/path/to/my/page/jcr:content/newNode` with `jcr:primaryTyp
 
 ##### Deleting Properties
 
-Rather than updating properties, you can also delete properties that the page may contain.
+Rather than updating properties, you can also delete properties that the node may contain.
 
 ```
 ./aempagetool.sh -n /content/path/to/my/page -d undesiredProp
 ```
+
+-or-
+
+```
+./aempagetool.sh -n /content/path/to/my/page -d undesiredProp -P
+```
+
+_Adding `-P` will delete only properties found in the `jcr:content` node of pages._
 
 ##### Replacing Properties
 
@@ -150,15 +180,29 @@ You can replace a portion of the string of the value of a single-value property 
 ./aempagetool.sh -n /content/path/to/my/page -p prop1=orig_str_portion -r replacement_str
 ```
 
+-or-
+
+```
+./aempagetool.sh -n /content/path/to/my/page -p prop1=orig_str_portion -r replacement_str -P
+```
+
+_Adding `-P` will update only properties found in the `jcr:content` node of pages._
+
 ##### Conditional Replacement
 
-An optional argument to include is a property (or properties) which the page to be updated must contain if that page is to be updated.
+An optional argument to include is a property (or properties) which the node to be updated must contain if that node is to be updated.
 
 ```
 ./aempagetool.sh -n /content/path/to/my/page -p prop1=val1 -m hasProp=currVal
 ```
 
-So, only a page(s) that has the property `hasProp` with the value `currVal` will get updated.
+...so, only a node(s) that has the property `hasProp` with the value `currVal` will get updated.
+
+```
+./aempagetool.sh -n /content/path/to/my/page -p prop1=val1 -m hasProp=currVal -P
+```
+
+_Adding `-P` will update only properties found in the `jcr:content` node of pages._
 
 ## Copying
 
@@ -170,6 +214,14 @@ When copying nodes, you need to specify the source (or the node that should be c
 ./aempagetool.sh -n /content/path/to/my/page -i node1 -o node2
 ```
 
+-or-
+
+```
+./aempagetool.sh -n /content/path/to/my/page -i node1 -o node2 -P
+```
+
+_Adding `-P` will copy only pages (nodes whose `jcr:primaryType` is `cq:Page`)._
+
 If you wish to copy a node nested within the `jcr:content` node, you would use the following command:
 
 ```
@@ -180,17 +232,27 @@ _Note: At this time, only the first node specified will be copied regardless of 
 
 ##### Copying Properties
 
-Copying properties is done similarly to copying nodes with the additional parameter `-P` (or `--property`). So, having a property, `prop1`, in the `jcr:content` node of the given page, you can copy the value of it to the newly specified property, `prop2` with the following command:
+Copying properties is done similarly to copying nodes with the additional parameter `-R` (or `--property-copy`). For example, to copy the value of a property `prop1` in the `jcr:content` node of the given node to a new property `prop2`, use the following command:
 
 ```
-./aempagetool.sh -n /content/path/to/my/page -i prop1 -o prop2 -P
+./aempagetool.sh -n /content/path/to/my/page -i prop1 -o prop2 -R
 ```
+
+-or-
+
+```
+./aempagetool.sh -n /content/path/to/my/page -i prop1 -o prop2 -R
+```
+
+_Adding `-P` will update only properties found in the `jcr:content` node of pages._
 
 More deeply nested properties can be copied using the same technique as specified previously:
 
 ```
-./aempagetool.sh -n /content/path/to/my/page -i par/subpar/prop1 -o par/subpar/prop2 -P
+./aempagetool.sh -n /content/path/to/my/page -i par/subpar/prop1 -o par/subpar/prop2 -R
 ```
+
+_Note: The `-R` option ensures the source property exists before copying and handles nested property paths correctly._
 
 ## Other Options
 
@@ -245,6 +307,7 @@ Available options:
   -o,--copy-to <arg>      Property to copy to (use with -i)
   -p <arg>                Property to update (property=value, multiple allowed)
   -P,--page               Restrict to cq:Page nodes (default: all node types)
+  -R,--property-copy      Copy properties instead of nodes (use with -i and -o)
   -r,--replace <arg>      Replace string in -p property with this value
   -s <arg>                Server: Hostname:port combo (e.g. localhost:4502)
   -S                      Use HTTPS instead of HTTP

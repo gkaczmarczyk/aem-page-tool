@@ -89,7 +89,7 @@ public class SlingClient {
         return context;
     }
 
-    private String executeGet(String url) throws IOException {
+    protected String executeGet(String url) throws IOException {
         HttpHost httpHost = createHttpHost();
         try (CloseableHttpClient client = createHttpClient(httpHost)) {
             HttpClientContext context = createClientContext(httpHost);
@@ -107,7 +107,7 @@ public class SlingClient {
         }
     }
 
-    private void executePost(String url, List<NameValuePair> params) throws IOException {
+    protected void executePost(String url, List<NameValuePair> params) throws IOException {
         HttpHost httpHost = createHttpHost();
         try (CloseableHttpClient client = createHttpClient(httpHost)) {
             HttpClientContext context = createClientContext(httpHost);
@@ -115,8 +115,10 @@ public class SlingClient {
             httpPost.setEntity(new UrlEncodedFormEntity(params));
             try (CloseableHttpResponse response = client.execute(httpPost, context)) {
                 lastStatusCode = response.getStatusLine().getStatusCode();
-                EntityUtils.consume(response.getEntity());
-                if ((lastStatusCode == 200 || lastStatusCode == 201) && PageToolApp.verbose) {
+                lastResponseText = EntityUtils.toString(response.getEntity());
+                if (lastStatusCode != 200 && lastStatusCode != 201) {
+                    Output.warn("\nFailed to post to " + url + " (status code: " + lastStatusCode + ", response: " + lastResponseText + ")");
+                } else if (PageToolApp.verbose) {
                     Output.info("Successfully posted to " + url + " (status code: " + lastStatusCode + ")");
                 }
             }
@@ -128,6 +130,7 @@ public class SlingClient {
 
     public void queryPages(String path) throws IOException {
         List<Property> propertiesList = null;
+        boolean isSimplePropertyUpdate = false;
         if (properties.getDeleteProperties() != null && !properties.getDeleteProperties().isEmpty()) {
             propertiesList = properties.getDeleteProperties().stream()
                     .map(propName -> new Property(propName, ""))
@@ -136,8 +139,26 @@ public class SlingClient {
             propertiesList = properties.getPropertyValueReplacementAsList();
         } else if (properties.getMatchingProperties() != null && !properties.getMatchingProperties().isEmpty()) {
             propertiesList = properties.getMatchingProperties();
+        } else if (properties.isPropertyCopy() && properties.getCopyFromProperties() != null && !properties.getCopyFromProperties().isEmpty()) {
+            propertiesList = properties.getCopyFromProperties().stream()
+                    .map(propName -> new Property(propName, ""))
+                    .collect(Collectors.toList());
+            if (PageToolApp.verbose) {
+                Output.info("Setting properties list for property copy: " + properties.getCopyFromProperties());
+            }
+        } else if (properties.getUpdateProperties() != null && !properties.getUpdateProperties().isEmpty() &&
+                (properties.getMatchingProperties() == null || properties.getMatchingProperties().isEmpty())) {
+            isSimplePropertyUpdate = true;
+            if (PageToolApp.verbose) {
+                Output.info("Detected simple property update operation");
+            }
         }
-        String url = queryUrl.buildUrl(path, propertiesList, properties.getMatchingNodes(), true, properties.isCqPageType(), null);
+        String url;
+        if (isSimplePropertyUpdate) {
+            url = queryUrl.buildUrl(path, null, properties.getMatchingNodes(), properties.isCqPageType(), true, properties);
+        } else {
+            url = queryUrl.buildUrl(path, propertiesList, properties.getMatchingNodes(), properties.isCqPageType(), properties.isPropertyCopy(), properties);
+        }
         if (PageToolApp.verbose) {
             Output.ninfo("Querying Sling URL: "); Output.nhl(url); Output.line();
         }
@@ -159,13 +180,47 @@ public class SlingClient {
     public String getPropertyValue(String path, String propertyName) throws IOException {
         String lastNode = propertyName.contains("/") ? propertyName.substring(0, propertyName.lastIndexOf("/")) : "";
         String propName = propertyName.contains("/") ? propertyName.substring(propertyName.lastIndexOf("/") + 1) : propertyName;
-        String url = queryUrl.buildUrl(path, lastNode) + ".json";
+        if (properties.isCqPageType()) {
+            path = path + (path.endsWith("/jcr:content") ? "" : "/jcr:content");
+        }
+        String url = queryUrl.buildUrl(path , lastNode);
+        if (PageToolApp.verbose) {
+            Output.info("\nFetching property value for '" + propertyName + "' at " + url);
+        }
         String responseText = executeGet(url);
+
+        if (responseText == null || responseText.isEmpty()) {
+            if (PageToolApp.verbose) {
+                Output.nwarn("\nEmpty response for property '" + propertyName + "' at " + url);
+            }
+            return null;
+        }
 
         try {
             JsonElement root = JsonParser.parseString(responseText);
-            JsonElement valueElement = root.getAsJsonObject().get(propName);
+            if (!root.isJsonObject()) {
+                if (PageToolApp.verbose) {
+                    Output.nwarn("Invalid JSON response for property '" + propertyName + "' at " + url + ": " + responseText);
+                }
+                return null;
+            }
+            JsonElement valueElement = root.getAsJsonObject();
+            if (!lastNode.isEmpty()) {
+                for (String node : lastNode.split("/")) {
+                    valueElement = valueElement.getAsJsonObject().get(node);
+                    if (valueElement == null || !valueElement.isJsonObject()) {
+                        if (PageToolApp.verbose) {
+                            Output.nwarn("Node '" + node + "' not found in path for property '" + propertyName + "' at " + url);
+                        }
+                        return null;
+                    }
+                }
+            }
+            valueElement = valueElement.getAsJsonObject().get(propName);
             if (valueElement == null) {
+                if (PageToolApp.verbose) {
+                    Output.nwarn("Property '" + propName + "' not found at " + url);
+                }
                 return null;
             }
             if (valueElement.isJsonArray()) {
@@ -178,7 +233,9 @@ public class SlingClient {
             }
             return valueElement.getAsString();
         } catch (Exception e) {
-            Output.nwarn("Failed to parse property '" + propertyName + "' from response: " + e.getMessage());
+            if (PageToolApp.verbose) {
+                Output.nwarn("Failed to parse property '" + propertyName + "' from response at " + url + ": " + e.getMessage());
+            }
             return null;
         }
     }
@@ -190,10 +247,9 @@ public class SlingClient {
         String url = queryUrl.buildUrl(false, path, properties.getUpdateProperties());
         List<NameValuePair> params = new ArrayList<>();
 
-        // Handle deletions
-        if (properties.getDeleteProperties() != null) {
+        if (properties.getDeleteProperties() != null) { // Handle deletions
             for (String prop : properties.getDeleteProperties()) {
-                params.add(new BasicNameValuePair(prop + SlingPostConstants.SUFFIX_DELETE, "delete-this"));
+                params.add(new BasicNameValuePair(prop + SlingPostConstants.SUFFIX_DELETE, "true"));
             }
         }
 
@@ -243,7 +299,7 @@ public class SlingClient {
         }
     }
 
-    public void copyProperties(String path) throws IOException {
+    public void copyProperties(String path, boolean isPropertyCopy) throws IOException {
         if (properties.getCopyFromProperties() == null || properties.getCopyToProperties() == null) {
             Output.nwarn("Copy properties are not configured.");
             return;
@@ -255,11 +311,65 @@ public class SlingClient {
                 String from = properties.getCopyFromProperties().get(i);
                 String to = properties.getCopyToProperties().get(i);
                 if (to == null) {
+                    if (PageToolApp.verbose) {
+                        Output.nwarn("No target property specified for source '" + from + "'; skipping.");
+                    }
                     break;
                 }
-                List<NameValuePair> params = new ArrayList<>();
-                params.add(new BasicNameValuePair(to + SlingPostConstants.SUFFIX_COPY_FROM, from));
-                executePost(queryUrl.buildUrl(path, ""), params);
+                if (isPropertyCopy) {
+                    String propValue = getPropertyValue(path, from);
+                    if (propValue == null) {
+                        if (PageToolApp.verbose) {
+                            Output.nwarn("\nSource property '" + from + "' not found at " + path + "; skipping.");
+                        }
+                        continue;
+                    }
+                    String targetPath;
+                    if (from.contains("/")) {
+                        String parentPath = from.substring(0, from.lastIndexOf("/"));
+                        String toParentPath = to.substring(0, to.lastIndexOf("/"));
+                        if (!parentPath.equals(toParentPath)) {
+                            if (PageToolApp.verbose) {
+                                Output.nwarn("\nSource and target parent paths do not match ('" + parentPath + "' vs '" + toParentPath + "'); skipping.");
+                            }
+                            continue;
+                        }
+                        targetPath = queryUrl.buildUrl(path, parentPath);
+                    } else {
+                        targetPath = queryUrl.buildUrl(path, "");
+                    }
+                    if (!targetPath.startsWith(conn.isSecure() ? SCHEME_SECURE : SCHEME)) {
+                        if (PageToolApp.verbose) {
+                            Output.nwarn("\nInvalid target path for property copy: " + targetPath + "; skipping.");
+                        }
+                        continue;
+                    }
+                    String toPropName = to.contains("/") ? to.substring(to.lastIndexOf("/") + 1) : to;
+                    List<NameValuePair> params = new ArrayList<>();
+                    params.add(new BasicNameValuePair(toPropName, propValue));
+                    executePost(targetPath, params);
+                    if (lastStatusCode != 200 && lastStatusCode != 201) {
+                        Output.nwarn("Failed to copy property from '" + from + "' to '" + to + "' at " + targetPath + " (status code: " + lastStatusCode + ")");
+                        continue;
+                    }
+                    if (PageToolApp.verbose) {
+                        Output.info("Copied property '" + from + "' to '" + to + "' at " + targetPath);
+                    }
+                } else {
+                    String parentPath = path.substring(0, path.lastIndexOf("/"));
+                    List<NameValuePair> params = new ArrayList<>();
+                    params.add(new BasicNameValuePair(":operation", "copy"));
+                    params.add(new BasicNameValuePair(":dest", parentPath + "/" + to));
+                    String sourcePath = queryUrl.buildUrl(path, null, null, false, false, null, false, properties);
+                    executePost(sourcePath, params);
+                    if (lastStatusCode != 200 && lastStatusCode != 201) {
+                        Output.nwarn("Failed to copy node from '" + from + "' to '" + to + "' at " + parentPath + "/" + to + " (status code: " + lastStatusCode + ")");
+                        continue;
+                    }
+                    if (PageToolApp.verbose) {
+                        Output.info("\nCopied node from '" + from + "' to '" + to + "' at " + parentPath + "/" + to);
+                    }
+                }
             }
         } catch (SlingClientException e) {
             Output.warn("Failed to initialize HTTP client: " + e.getMessage());

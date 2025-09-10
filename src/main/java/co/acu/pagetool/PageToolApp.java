@@ -31,10 +31,6 @@ public class PageToolApp {
         dryRun = cmd.hasOption('y');
 
         CrxConnection conn = CrxConnectionFactory.getCrxConnection(cmd, secure);
-        if (conn == null) {
-            Output.warn("Failed to configure AEM connection.");
-            return;
-        }
 
         OperationProperties props = new OperationProperties();
         String parentNodePath = cmd.getOptionValue('n');
@@ -43,10 +39,9 @@ public class PageToolApp {
         }
 
         SlingClient slingClient = new SlingClient(conn, props, new QueryUrl(conn));
-        PageTool pageTool = new PageTool(parentNodePath, conn, slingClient);
+        PageTool pageTool = new PageTool(parentNodePath, slingClient);
 
         pageTool.setProperties(props);
-        pageTool.setIsPropertyPath(cmd.hasOption('P'));
         pageTool.executeOperation();
     }
 
@@ -68,11 +63,13 @@ public class PageToolApp {
                 .addOption("o", "copy-to", true, "Property to copy to (use with -i)")
                 .addOption("a", "add-node", true, "Create node with name=jcr:primaryType (e.g. newNode=nt:unstructured)")
                 .addOption("P", "page", false, "Restrict to cq:Page nodes (default: all node types)")
+                .addOption("R", "property-copy", false, "Copy properties instead of nodes (use with -i and -o)")
                 .addOption("r", "replace", true, "Replace string in -p property with this value")
                 .addOption("d", "delete", true, "Property to delete")
                 .addOption("f", "find", true, "Search criteria (node_name or property=value)")
                 .addOption("y", false, "Perform a dry run (no updates)")
                 .addOption("x", false, "Verbose output");
+
         return options;
     }
 
@@ -91,6 +88,7 @@ public class PageToolApp {
                 e.printStackTrace();
             }
             printHelp(options);
+
             return null;
         }
     }
@@ -112,6 +110,11 @@ public class PageToolApp {
             Output.warn("Node creation (-a) requires matching properties (-m).");
             return false;
         }
+        if (cmd.hasOption('R') && (!cmd.hasOption('i') || !cmd.hasOption('o'))) {
+            Output.warn("Property copy (-R) requires both 'copy from' (-i) and 'copy to' (-o).");
+            return false;
+        }
+
         return true;
     }
 
@@ -126,6 +129,9 @@ public class PageToolApp {
     private static boolean configureProperties(OperationProperties props, CommandLine cmd, Options options) {
         if (cmd.hasOption('P')) {
             props.setCqPageType(true);
+        }
+        if (cmd.hasOption('R')) {
+            props.setPropertyCopy(true);
         }
 
         try {
@@ -169,8 +175,10 @@ public class PageToolApp {
             if (verbose) {
                 e.printStackTrace();
             }
+
             return false;
         }
+
         return true;
     }
 
@@ -207,7 +215,7 @@ public class PageToolApp {
         }
         PrintWriter pw = new PrintWriter(System.out);
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp(pw, cols, "pagetool -n /path/to/parent/page -p property=value [-p p=v ...] [OPTIONS]",
+        formatter.printHelp(pw, cols, "aempagetool -n /path/to/parent/page -p property=value [-p p=v ...] [OPTIONS]",
                 "Available options:", options, 2, 4, null);
         pw.flush();
         pw.close();

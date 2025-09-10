@@ -18,24 +18,17 @@ import java.io.IOException;
 public class PageTool {
 
     private final String parentNodePath;
-    private final CrxConnection conn;
     private final SlingClient slingClient;
 
     private OperationProperties properties;
-    private boolean isPropertyPath;
 
-    public PageTool(String parentNodePath, CrxConnection conn, SlingClient slingClient) {
+    public PageTool(String parentNodePath, SlingClient slingClient) {
         this.parentNodePath = parentNodePath;
-        this.conn = conn;
         this.slingClient = slingClient;
     }
 
     public void setProperties(OperationProperties properties) {
         this.properties = properties;
-    }
-
-    public void setIsPropertyPath(boolean isPropertyPath) {
-        this.isPropertyPath = isPropertyPath;
     }
 
     public void executeOperation() {
@@ -53,7 +46,7 @@ public class PageTool {
                 processPages(parentNodePath);
             }
         } catch (IOException e) {
-            Output.warn("Failed to execute operation: " + e.getMessage());
+            Output.warn("Failed to execute operation: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
             if (PageToolApp.verbose) {
                 e.printStackTrace();
             }
@@ -77,7 +70,7 @@ public class PageTool {
                 slingClient.updatePage(pagePath);
             }
             if (properties.getCopyFromProperties() != null && properties.getCopyToProperties() != null) {
-                slingClient.copyProperties(pagePath);
+                slingClient.copyProperties(pagePath, properties.isPropertyCopy());
             }
             if (properties.getPropertyValueReplacement() != null) {
                 try {
@@ -121,6 +114,7 @@ public class PageTool {
             Output.nwarn("No hits found in response: " + responseText);
             return new JsonArray();
         }
+
         return hits;
     }
 

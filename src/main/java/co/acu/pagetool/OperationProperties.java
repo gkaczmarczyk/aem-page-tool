@@ -49,6 +49,8 @@ public class OperationProperties {
 
     private boolean cqPageType = false;
 
+    private boolean propertyCopy = false;
+
     /**
      * Get the set list of matching properties
      * @return A list of properties which a page is expected to contain
@@ -309,6 +311,17 @@ public class OperationProperties {
         }
 
         return propertiesList;
+    }
+
+    public boolean isPropertyCopy() {
+        return propertyCopy;
+    }
+
+    public void setPropertyCopy(boolean propertyCopy) {
+        this.propertyCopy = propertyCopy;
+        if (propertyCopy) {
+            this.searchOnly = false;
+        }
     }
 
 }
