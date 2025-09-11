@@ -62,17 +62,17 @@ When using the `-c` option, the value is parsed by splitting at the first `@` ch
 
 ## cq:Page or Not
 
-##### Working with cq:Page nodes
+##### ![note_stack icon](/imgs/note_stack_24.png) Working with cq:Page nodes
 
 By default, matches are performed all nodes. If you wish to restrict queries to nodes with a jcr:primaryType of cq:Page, then specify `-P` flag:
 
 ```
-./aempagetool.sh -n /content/path/to/my/page -P -f mynode
+./aempagetool.sh -n /content/path/to/my/page -f mynode -P
 ```
 
 ## Searching
 
-##### Simple Searching
+##### ![search icon](/imgs/search_24.png) Simple Searching
 
 If just interested in finding which nodes contain specific properties with their values or finding if a node exists within a tree by a specific name, then you can perform a search. The option to search is `-f` and can be used as:
 
@@ -111,7 +111,7 @@ Additionally, a single or set of properties are specified which are expected to 
 
 _Adding `-P` will make updates only to the `jcr:content` node of pages._
 
-##### Multi-Value Properties
+##### ![array icon](/imgs/data_array_24.png) Multi-Value Properties
 
 You can also save multi-value properties. To do so, surround your property value with square brackets & comma separate the values if there are more than one. _(Currently only `String` multi-values are supported)_
 
@@ -119,19 +119,23 @@ You can also save multi-value properties. To do so, surround your property value
 ./aempagetool.sh -n /content/path/to/my/page -p prop1=[val1] -p prop2=[val2,val3]
 ```
 
+-or-
+
 ```
 ./aempagetool.sh -n /content/path/to/my/page -p prop1=[val1] -p prop2=[val2,val3] -P
 ```
 
 _Adding `-P` will make updates only to the `jcr:content` node of pages._
 
-##### Adding Properties
+##### ![add page icon](/imgs/note_add_24.png) Adding Properties
 
 if you wish to create a property in a node nested within the `jcr:content` node, you need to specify the entire path past the `jcr:content` node. For example, to create/update a property, `prop1`, in the path `/content/path/to/my/page/jcr:content/par/subnode` you would use the following command:
 
 ```
 ./aempagetool.sh -n /content/path/to/my/page -p par/subnode/prop1=val1
 ```
+
+-or-
 
 ```
 ./aempagetool.sh -n /content/path/to/my/page -p par/subnode/prop1=val1 -P
@@ -141,7 +145,7 @@ _Adding `-P` will add properties only to the `jcr:content` node of pages._
 
 **Please note:** this is the same syntax as the update properties syntax. This adds properties and overwrites existing properties.
 
-##### Creating Nodes
+##### ![add folder icon](/imgs/create_new_folder_24.png) Creating Nodes
 
 You can create a new node under nodes that match specific properties. Use the `-a` option to specify the node name and its `jcr:primaryType` (e.g. `newNode=nt:unstructured`). This requires the `-m` option to identify the parent nodes where the new node will be created. For example, to create a node `newNode` under `/jcr:content` nodes with `jcr:content=cq:PageContent`:
 
@@ -151,7 +155,7 @@ You can create a new node under nodes that match specific properties. Use the `-
 
 This creates `/content/path/to/my/page/jcr:content/newNode` with `jcr:primaryType=nt:unstructured` for each matched node.
 
-##### Deleting Properties
+##### ![trash can icon](/imgs/delete_24.png) Deleting Properties
 
 Rather than updating properties, you can also delete properties that the node may contain.
 
@@ -167,12 +171,12 @@ Rather than updating properties, you can also delete properties that the node ma
 
 _Adding `-P` will delete only properties found in the `jcr:content` node of pages._
 
-##### Replacing Properties
+##### ![rotating search icon](/imgs/find_replace_24.png) Replacing Properties
 
 You can specify both `-p` & `-d` arguments. If you specify `-d` & `-p` with the same property name, the update will follow the rules of the SlingPostServlet. _The property is first deleted and then filled with the new content._
 
 
-##### String Replacement in Single-Value Properties
+##### ![regular expression icon](/imgs/regular_expression_24.png) String Replacement in Single-Value Properties
 
 You can replace a portion of the string of the value of a single-value property with another string by combining the `-p` and `-r` properties.
 
@@ -188,7 +192,7 @@ You can replace a portion of the string of the value of a single-value property 
 
 _Adding `-P` will update only properties found in the `jcr:content` node of pages._
 
-##### Conditional Replacement
+##### ![question icon](/imgs/quiz_24.png) Conditional Replacement
 
 An optional argument to include is a property (or properties) which the node to be updated must contain if that node is to be updated.
 
@@ -206,7 +210,7 @@ _Adding `-P` will update only properties found in the `jcr:content` node of page
 
 ## Copying
 
-##### Copying Nodes
+##### ![copying folder icon](/imgs/folder_copy_24.png) Copying Nodes
 
 When copying nodes, you need to specify the source (or the node that should be copied) and the target (or the name of the node to which the source should be copied). The source is specified with `-i` (or `--copy-from`) & the target is specified with `-o` (or `--copy-to`).
 
@@ -230,7 +234,7 @@ If you wish to copy a node nested within the `jcr:content` node, you would use t
 
 _Note: At this time, only the first node specified will be copied regardless of how many nodes you specify at the command line._
 
-##### Copying Properties
+##### ![copy file icon](/imgs/file_copy_24.png) Copying Properties
 
 Copying properties is done similarly to copying nodes with the additional parameter `-R` (or `--property-copy`). For example, to copy the value of a property `prop1` in the `jcr:content` node of the given node to a new property `prop2`, use the following command:
 
@@ -241,7 +245,7 @@ Copying properties is done similarly to copying nodes with the additional parame
 -or-
 
 ```
-./aempagetool.sh -n /content/path/to/my/page -i prop1 -o prop2 -R
+./aempagetool.sh -n /content/path/to/my/page -i prop1 -o prop2 -R -P
 ```
 
 _Adding `-P` will update only properties found in the `jcr:content` node of pages._
@@ -257,7 +261,7 @@ _Note: The `-R` option ensures the source property exists before copying and han
 ## Other Options
 
 
-##### Use secure connection (HTTPS)
+##### ![shield icon](/imgs/encrypted_24.png) Use secure connection (HTTPS)
 
 The connection to AEM is by default made over http. If you need to connect to your server via https, use the `-S` option.
 
@@ -265,7 +269,7 @@ The connection to AEM is by default made over http. If you need to connect to yo
 ./aempagetool.sh -n /content/path/to/my/page -p prop1=val1 -S
 ```
 
-##### Skip SSL Checking
+##### ![slashed shield icon](/imgs/safety_check_off_24.png) Skip SSL Checking
 
 When using the previous option, `-S`, by default, Java validates the SSL certificate for the host you specify unless you use localhost as the host to which you're connecting. If your host is an IP address or a domain with no valid SSL certificate, then you'll need to bypass SSL certificate checking by using the `-C` option.
 
@@ -273,7 +277,7 @@ When using the previous option, `-S`, by default, Java validates the SSL certifi
 ./aempagetool.sh -n /content/path/to/my/page -p prop1=val1 -S -C
 ```
 
-##### Dry Run
+##### ![bunny icon](/imgs/cruelty_free_24.png) Dry Run
 
 A dry run will allow you to see which pages will get updated prior to making any real changes. It is enabled with `-y`.
 
@@ -281,7 +285,7 @@ A dry run will allow you to see which pages will get updated prior to making any
 ./aempagetool.sh -n /content/path/to/my/page -p prop1=val1 -y
 ```
 
-##### Verbose Output
+##### ![exiting icon](/imgs/output_24.png) Verbose Output
 
 If you would prefer more verbose output to see what's happening as it's happening, use `-x`.
 
@@ -292,7 +296,7 @@ If you would prefer more verbose output to see what's happening as it's happenin
 ## Full List of Options
 
 ```
-usage: pagetool -n /path/to/parent/page -p property=value [-p p=v ...] [OPTIONS]
+usage: aempagetool -n /path/to/parent/page -p property=value [-p p=v ...] [OPTIONS]
 Available options:
   -a,--add-node <arg>     Create node with name=jcr:primaryType (e.g. newNode=nt:unstructured)
   -c <arg>                Credentials: Full combo (e.g. admin:admin@localhost:4502)
