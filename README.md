@@ -44,7 +44,7 @@ The AEM Page Tool can be invoked using platform-specific wrapper scripts or dire
 
 ## AEM Authentication
 
-##### Passing credentials
+##### ![key icon](/imgs/key_24.png) Passing credentials
 
 Credentials can be specified in any manner depending on your needs with any of the following options:
 
