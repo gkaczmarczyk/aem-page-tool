@@ -59,6 +59,7 @@ public class PageToolApp {
                 .addOption("n", true, "Parent node path for updates (required)")
                 .addOption("m", "match", true, "Match nodes with property=value (multiple allowed)")
                 .addOption("p", true, "Property to update (property=value, multiple allowed)")
+                .addOption("A", "append", true, "Append value(s) to a multi-value property (property=value, multiple allowed)")
                 .addOption("i", "copy-from", true, "Property to copy from (use with -o)")
                 .addOption("o", "copy-to", true, "Property to copy to (use with -i)")
                 .addOption("a", "add-node", true, "Create node with name=jcr:primaryType (e.g. newNode=nt:unstructured)")
@@ -98,8 +99,12 @@ public class PageToolApp {
             Output.warn("Parent node (-n) is required.");
             return false;
         }
-        if (!cmd.hasOption('p') && !cmd.hasOption('d') && !cmd.hasOption("i") && !cmd.hasOption('f') && !cmd.hasOption('a')) {
-            Output.warn("At least one operation (-p, -d, -i, -f, or -a) is required.");
+        if (!cmd.hasOption('p') && !cmd.hasOption('d') && !cmd.hasOption("i") && !cmd.hasOption('f') && !cmd.hasOption('a') && !cmd.hasOption('A')) {
+            Output.warn("At least one operation (-p, -A, -d, -i, -f, or -a) is required.");
+            return false;
+        }
+        if (cmd.hasOption('r') && !cmd.hasOption('p')) {
+            Output.warn("String replacement (-r) requires a property (-p).");
             return false;
         }
         if ((cmd.hasOption('i') && !cmd.hasOption("o")) || (!cmd.hasOption("i") && cmd.hasOption("o"))) {
@@ -163,6 +168,9 @@ public class PageToolApp {
             }
             if (cmd.hasOption('r')) {
                 props.setPropertyValueReplacement(cmd.getOptionValues('p'), cmd.getOptionValues('r'));
+            }
+            if (cmd.hasOption('A')) {
+                setProperty(props::setAppendProperties, cmd.getOptionValues('A'), options.getOption("A"), "append");
             }
             if (cmd.hasOption('d')) {
                 setProperty(props::setDeleteProperties, cmd.getOptionValues('d'), options.getOption("d"), "delete");

@@ -146,7 +146,8 @@ public class SlingClient {
             if (PageToolApp.verbose) {
                 Output.info("Setting properties list for property copy: " + properties.getCopyFromProperties());
             }
-        } else if (properties.getUpdateProperties() != null && !properties.getUpdateProperties().isEmpty() &&
+        } else if (((properties.getUpdateProperties() != null && !properties.getUpdateProperties().isEmpty()) ||
+                (properties.getAppendProperties() != null && !properties.getAppendProperties().isEmpty())) &&
                 (properties.getMatchingProperties() == null || properties.getMatchingProperties().isEmpty())) {
             isSimplePropertyUpdate = true;
             if (PageToolApp.verbose) {
@@ -177,7 +178,14 @@ public class SlingClient {
         }
     }
 
-    public String getPropertyValue(String path, String propertyName) throws IOException {
+    /**
+     * Fetches the raw JSON element for a property, navigating any nested node path.
+     *
+     * @param path         The node path
+     * @param propertyName The property name, optionally prefixed with a nested node path (e.g. par/subpar/prop)
+     * @return The JsonElement for the property, or null if not found or on error
+     */
+    private JsonElement getPropertyElement(String path, String propertyName) throws IOException {
         String lastNode = propertyName.contains("/") ? propertyName.substring(0, propertyName.lastIndexOf("/")) : "";
         String propName = propertyName.contains("/") ? propertyName.substring(propertyName.lastIndexOf("/") + 1) : propertyName;
         if (properties.isCqPageType()) {
@@ -223,21 +231,48 @@ public class SlingClient {
                 }
                 return null;
             }
-            if (valueElement.isJsonArray()) {
-                StringBuilder sb = new StringBuilder();
-                for (JsonElement val : valueElement.getAsJsonArray()) {
-                    if (sb.length() > 0) sb.append(",");
-                    sb.append(val.getAsString());
-                }
-                return sb.toString();
-            }
-            return valueElement.getAsString();
+            return valueElement;
         } catch (Exception e) {
             if (PageToolApp.verbose) {
                 Output.nwarn("Failed to parse property '" + propertyName + "' from response at " + url + ": " + e.getMessage());
             }
             return null;
         }
+    }
+
+    public String getPropertyValue(String path, String propertyName) throws IOException {
+        JsonElement valueElement = getPropertyElement(path, propertyName);
+        if (valueElement == null) {
+            return null;
+        }
+        if (valueElement.isJsonArray()) {
+            StringBuilder sb = new StringBuilder();
+            for (JsonElement val : valueElement.getAsJsonArray()) {
+                if (sb.length() > 0) sb.append(",");
+                sb.append(val.getAsString());
+            }
+            return sb.toString();
+        }
+        return valueElement.getAsString();
+    }
+
+    /**
+     * Fetches a property's values as an array when it is a multi-value (JSON array) property.
+     *
+     * @param path         The node path
+     * @param propertyName The property name
+     * @return The array of values if the property is multi-valued, or null if it is single-valued or not found
+     */
+    public String[] getPropertyValues(String path, String propertyName) throws IOException {
+        JsonElement valueElement = getPropertyElement(path, propertyName);
+        if (valueElement == null || !valueElement.isJsonArray()) {
+            return null;
+        }
+        List<String> values = new ArrayList<>();
+        for (JsonElement val : valueElement.getAsJsonArray()) {
+            values.add(val.getAsString());
+        }
+        return values.toArray(new String[0]);
     }
 
     /**
@@ -294,6 +329,36 @@ public class SlingClient {
             }
         }
 
+        if (!params.isEmpty()) {
+            executePost(url, params);
+        }
+    }
+
+    /**
+     * Appends value(s) to existing multi-value properties using the Sling @Patch operation.
+     * The @Patch add operation is idempotent (it will not create duplicate values) and targets
+     * existing multi-value properties. If a property exists but is single-valued, it is skipped
+     * to avoid corrupting it.
+     */
+    public void appendPropertyValues(String path) throws IOException {
+        if (properties.getAppendProperties() == null || properties.getAppendProperties().isEmpty()) {
+            return;
+        }
+        String url = queryUrl.buildUrl(false, path, properties.getAppendProperties());
+        List<NameValuePair> params = new ArrayList<>();
+        for (Property prop : properties.getAppendProperties()) {
+            JsonElement current = getPropertyElement(path, prop.getName());
+            if (current != null && !current.isJsonArray()) {
+                Output.nwarn("Property '" + prop.getName() + "' at " + path + " is single-valued; skipping append.");
+                continue;
+            }
+            // current is null (the @Patch will create a new multi-value property) or already an array.
+            String[] valuesToAppend = prop.isMulti() ? prop.getValues() : new String[]{prop.getValue()};
+            for (String value : valuesToAppend) {
+                params.add(new BasicNameValuePair(prop.getName() + SlingPostConstants.SUFFIX_PATCH,
+                        SlingPostConstants.PATCH_ADD + value));
+            }
+        }
         if (!params.isEmpty()) {
             executePost(url, params);
         }
@@ -382,13 +447,44 @@ public class SlingClient {
         if (replacement == null || replacement.getValues().length < 2) {
             throw new SlingClientException("Replacement property or values not properly configured");
         }
-        String currentValue = getPropertyValue(path, replacement.getName());
-        if (currentValue == null) {
+        String oldValue = replacement.getValues()[0];
+        String newValue = replacement.getValues()[1];
+
+        JsonElement valueElement = getPropertyElement(path, replacement.getName());
+        if (valueElement == null) {
             throw new SlingClientException("Unable to retrieve value for property: " + replacement.getName());
         }
-        String updatedValue = currentValue.replace(replacement.getValues()[0], replacement.getValues()[1]);
+
         List<NameValuePair> params = new ArrayList<>();
-        params.add(new BasicNameValuePair(replacement.getName(), updatedValue));
+        if (valueElement.isJsonArray()) {
+            // Multi-value: replace the matching element(s) exactly, preserving the other elements and their order.
+            List<String> values = new ArrayList<>();
+            boolean matched = false;
+            for (JsonElement el : valueElement.getAsJsonArray()) {
+                String value = el.getAsString();
+                if (value.equals(oldValue)) {
+                    values.add(newValue);
+                    matched = true;
+                } else {
+                    values.add(value);
+                }
+            }
+            if (!matched) {
+                if (PageToolApp.verbose) {
+                    Output.nwarn("No element equal to '" + oldValue + "' found in multi-value property '"
+                            + replacement.getName() + "' at " + path + "; skipping.");
+                }
+                return;
+            }
+            params.add(new BasicNameValuePair(replacement.getName() + SlingPostConstants.TYPE_HINT_SUFFIX, "String[]"));
+            for (String value : values) {
+                params.add(new BasicNameValuePair(replacement.getName(), value));
+            }
+        } else {
+            // Single-value: substring replace within the value.
+            String updatedValue = valueElement.getAsString().replace(oldValue, newValue);
+            params.add(new BasicNameValuePair(replacement.getName(), updatedValue));
+        }
         executePost(queryUrl.buildUrl(path, ""), params);
     }
 

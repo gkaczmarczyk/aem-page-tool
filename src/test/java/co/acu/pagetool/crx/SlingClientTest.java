@@ -380,6 +380,114 @@ class SlingClientTest {
     }
 
     @Test
+    void testGetPropertyValues_MultiValue() throws Exception {
+        String propertyJson = "{\"tags\": [\"a\", \"b\", \"c\"]}";
+        when(properties.isCqPageType()).thenReturn(false);
+        when(queryUrl.buildUrl("/content/testPage", "")).thenReturn("http://localhost:4502/content/testPage.json");
+
+        doAnswer(invocation -> {
+            setPrivateField("lastStatusCode", 200);
+            return propertyJson;
+        }).when(slingClient).executeGet(anyString());
+
+        String[] result = slingClient.getPropertyValues(path, "tags");
+
+        assertArrayEquals(new String[]{"a", "b", "c"}, result, "Should return the array elements");
+    }
+
+    @Test
+    void testGetPropertyValues_SingleValueReturnsNull() throws Exception {
+        String propertyJson = "{\"tags\": \"a\"}";
+        when(properties.isCqPageType()).thenReturn(false);
+        when(queryUrl.buildUrl("/content/testPage", "")).thenReturn("http://localhost:4502/content/testPage.json");
+
+        doAnswer(invocation -> {
+            setPrivateField("lastStatusCode", 200);
+            return propertyJson;
+        }).when(slingClient).executeGet(anyString());
+
+        String[] result = slingClient.getPropertyValues(path, "tags");
+
+        assertNull(result, "Single-valued property should return null");
+    }
+
+    @Test
+    void testAppendPropertyValues_Success() throws Exception {
+        ArrayList<Property> appendProps = new ArrayList<>();
+        appendProps.add(new Property("tags", "newTag"));
+        when(properties.getAppendProperties()).thenReturn(appendProps);
+        when(properties.isCqPageType()).thenReturn(false);
+        when(queryUrl.buildUrl(false, path, appendProps)).thenReturn("http://localhost:4502/content/testPage.json");
+        when(queryUrl.buildUrl("/content/testPage", "")).thenReturn("http://localhost:4502/content/testPage.json");
+
+        doAnswer(invocation -> {
+            setPrivateField("lastStatusCode", 200);
+            return "{\"tags\": [\"existing\"]}";
+        }).when(slingClient).executeGet(anyString());
+
+        doAnswer(invocation -> {
+            setPrivateField("lastStatusCode", 200);
+            return null;
+        }).when(slingClient).executePost(anyString(), anyList());
+
+        slingClient.appendPropertyValues(path);
+
+        verify(slingClient, times(1)).executePost(
+                eq("http://localhost:4502/content/testPage.json"),
+                argThat(params -> params.stream().anyMatch(p ->
+                        p.getName().equals("tags@Patch") && p.getValue().equals("+newTag"))));
+    }
+
+    @Test
+    void testAppendPropertyValues_SkipsSingleValued() throws Exception {
+        ArrayList<Property> appendProps = new ArrayList<>();
+        appendProps.add(new Property("tags", "newTag"));
+        when(properties.getAppendProperties()).thenReturn(appendProps);
+        when(properties.isCqPageType()).thenReturn(false);
+        when(queryUrl.buildUrl(false, path, appendProps)).thenReturn("http://localhost:4502/content/testPage.json");
+        when(queryUrl.buildUrl("/content/testPage", "")).thenReturn("http://localhost:4502/content/testPage.json");
+
+        doAnswer(invocation -> {
+            setPrivateField("lastStatusCode", 200);
+            return "{\"tags\": \"single\"}";
+        }).when(slingClient).executeGet(anyString());
+
+        slingClient.appendPropertyValues(path);
+
+        verify(slingClient, never()).executePost(anyString(), anyList());
+    }
+
+    @Test
+    void testReplacePropertyValue_MultiValue_Success() throws Exception {
+        when(properties.getPropertyValueReplacement()).thenReturn(prop);
+        when(properties.isCqPageType()).thenReturn(false);
+        when(prop.getName()).thenReturn("tags");
+        when(prop.getValues()).thenReturn(new String[]{"old", "new"});
+        when(queryUrl.buildUrl("/content/testPage", "")).thenReturn("http://localhost:4502/content/testPage.json");
+
+        doAnswer(invocation -> {
+            setPrivateField("lastStatusCode", 200);
+            return "{\"tags\": [\"a\", \"old\", \"b\"]}";
+        }).when(slingClient).executeGet(anyString());
+
+        doAnswer(invocation -> {
+            setPrivateField("lastStatusCode", 200);
+            return null;
+        }).when(slingClient).executePost(anyString(), anyList());
+
+        slingClient.replacePropertyValue(path);
+
+        verify(slingClient, times(1)).executePost(
+                eq("http://localhost:4502/content/testPage.json"),
+                argThat(params ->
+                        params.stream().anyMatch(p -> p.getName().equals("tags@TypeHint") && p.getValue().equals("String[]")) &&
+                        params.stream().anyMatch(p -> p.getName().equals("tags") && p.getValue().equals("a")) &&
+                        params.stream().anyMatch(p -> p.getName().equals("tags") && p.getValue().equals("new")) &&
+                        params.stream().anyMatch(p -> p.getName().equals("tags") && p.getValue().equals("b")) &&
+                        params.stream().noneMatch(p -> p.getName().equals("tags") && p.getValue().equals("old"))));
+    }
+
+    @Test
     void testDeleteProperties_Success() throws Exception {
         when(properties.getDeleteProperties()).thenReturn(new ArrayList<>(List.of("prop1", "prop2")));
         when(queryUrl.buildUrl(path, "")).thenReturn("http://localhost:4502/content/testPage");

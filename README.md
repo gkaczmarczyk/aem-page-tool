@@ -127,6 +127,24 @@ You can also save multi-value properties. To do so, surround your property value
 
 _Adding `-P` will make updates only to the `jcr:content` node of pages._
 
+Note that `-p prop=[v1,v2]` always **overwrites** the entire multi-value property. If instead you want to **append** one or more values to an existing multi-value property without disturbing its current values, use the `-A` (or `--append`) option:
+
+```
+./aempagetool.sh -n /content/path/to/my/page -A prop1=newVal
+```
+
+You can append more than one value at once by using the bracket syntax, and you can specify `-A` multiple times:
+
+```
+./aempagetool.sh -n /content/path/to/my/page -A "prop1=[newVal1,newVal2]" -A prop2=newVal3
+```
+
+Appending is implemented using the SlingPostServlet `@Patch` operation, so it is performed server-side and is idempotent. The target property must be multi-valued; if it already exists as a single-value property, the append is skipped with a warning. If the property does not yet exist, it is created as a multi-value property.
+
+To replace a single value of a multi-value property, see [String Replacement](#string-replacement-in-properties) below.
+
+_Adding `-P` will append only to properties found in the `jcr:content` node of pages._
+
 ##### ![add page icon](/imgs/note_add_24.png) Adding Properties
 
 if you wish to create a property in a node nested within the `jcr:content` node, you need to specify the entire path past the `jcr:content` node. For example, to create/update a property, `prop1`, in the path `/content/path/to/my/page/jcr:content/par/subnode` you would use the following command:
@@ -176,7 +194,7 @@ _Adding `-P` will delete only properties found in the `jcr:content` node of page
 You can specify both `-p` & `-d` arguments. If you specify `-d` & `-p` with the same property name, the update will follow the rules of the SlingPostServlet. _The property is first deleted and then filled with the new content._
 
 
-##### ![regular expression icon](/imgs/regular_expression_24.png) String Replacement in Single-Value Properties
+##### ![regular expression icon](/imgs/regular_expression_24.png) String Replacement in Properties
 
 You can replace a portion of the string of the value of a single-value property with another string by combining the `-p` and `-r` properties.
 
@@ -191,6 +209,14 @@ You can replace a portion of the string of the value of a single-value property 
 ```
 
 _Adding `-P` will update only properties found in the `jcr:content` node of pages._
+
+The same `-p` + `-r` combination also works on **multi-value** properties. When the target property is multi-valued, the element whose value exactly equals the `-p` value is replaced with the `-r` value, leaving the other elements (and their order) intact:
+
+```
+./aempagetool.sh -n /content/path/to/my/page -p prop1=existingElement -r newElement
+```
+
+_Note: for single-value properties the replacement is a substring replace, whereas for multi-value properties it is a whole-element match._
 
 ##### ![question icon](/imgs/quiz_24.png) Conditional Replacement
 
@@ -298,6 +324,7 @@ If you would prefer more verbose output to see what's happening as it's happenin
 ```
 usage: aempagetool -n /path/to/parent/page -p property=value [-p p=v ...] [OPTIONS]
 Available options:
+  -A,--append <arg>       Append value(s) to a multi-value property (property=value, multiple allowed)
   -a,--add-node <arg>     Create node with name=jcr:primaryType (e.g. newNode=nt:unstructured)
   -c <arg>                Credentials: Full combo (e.g. admin:admin@localhost:4502)
   -C                      Bypass SSL certificate checking

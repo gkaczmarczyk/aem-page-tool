@@ -106,6 +106,29 @@ class OperationPropertiesTest {
     }
 
     @Test
+    void testSetAppendProperties_SingleValue() throws InvalidPropertyException {
+        operationProperties.setAppendProperties(new String[]{"tags=newTag"});
+        ArrayList<Property> result = operationProperties.getAppendProperties();
+
+        assertEquals(1, result.size(), "Should have one append property");
+        assertEquals("tags", result.get(0).getName(), "Property name should match");
+        assertEquals("newTag", result.get(0).getValue(), "Property value should match");
+        assertFalse(result.get(0).isMulti(), "Single value should not be multi-valued");
+        assertFalse(operationProperties.isSearchOnly(), "Should not be search only");
+    }
+
+    @Test
+    void testSetAppendProperties_BracketValues() throws InvalidPropertyException {
+        operationProperties.setAppendProperties(new String[]{"tags=[a,b]"});
+        ArrayList<Property> result = operationProperties.getAppendProperties();
+
+        assertEquals(1, result.size(), "Should have one append property");
+        assertEquals("tags", result.get(0).getName(), "Property name should match");
+        assertTrue(result.get(0).isMulti(), "Bracket values should be multi-valued");
+        assertArrayEquals(new String[]{"a", "b"}, result.get(0).getValues(), "Values should be parsed from brackets");
+    }
+
+    @Test
     void testSetPropertyValueReplacement_Valid() throws Exception {
         try (MockedStatic<Property> staticMock = mockStatic(Property.class)) {
             staticMock.when(() -> Property.getProperty("name=old")).thenReturn(property);
@@ -178,6 +201,7 @@ class OperationPropertiesTest {
         assertNull(operationProperties.getMatchingProperties(), "Matching properties should be null initially");
         assertNull(operationProperties.getMatchingNodes(), "Matching nodes should be null initially");
         assertNull(operationProperties.getUpdateProperties(), "Update properties should be null initially");
+        assertNull(operationProperties.getAppendProperties(), "Append properties should be null initially");
         assertNull(operationProperties.getPropertyValueReplacement(), "Property value replacement should be null initially");
         assertNull(operationProperties.getPropertyValueReplacementAsList(), "Property value replacement list should be null initially");
         assertNull(operationProperties.getCopyFromProperties(), "Copy from properties should be null initially");

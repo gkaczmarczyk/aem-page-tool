@@ -1,6 +1,5 @@
 package co.acu.pagetool;
 
-import co.acu.pagetool.crx.CrxConnection;
 import co.acu.pagetool.crx.SlingClient;
 import co.acu.pagetool.exception.SlingClientException;
 import co.acu.pagetool.util.Output;
@@ -68,6 +67,9 @@ public class PageTool {
             Output.ninfo("Processing " + (properties.isCqPageType() ? "page: " : "node: ") + pagePath);
             if (properties.getUpdateProperties() != null) {
                 slingClient.updatePage(pagePath);
+            }
+            if (properties.getAppendProperties() != null) {
+                slingClient.appendPropertyValues(pagePath);
             }
             if (properties.getCopyFromProperties() != null && properties.getCopyToProperties() != null) {
                 slingClient.copyProperties(pagePath, properties.isPropertyCopy());

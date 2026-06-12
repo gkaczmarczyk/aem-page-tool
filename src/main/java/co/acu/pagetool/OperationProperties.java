@@ -26,6 +26,11 @@ public class OperationProperties {
      */
     private ArrayList<Property> updateProperties = null;
 
+    /**
+     * A list of properties whose value(s) will be appended to existing multi-value properties
+     */
+    private ArrayList<Property> appendProperties = null;
+
     private Property propertyValueReplacement = null;
 
     /**
@@ -165,6 +170,29 @@ public class OperationProperties {
             System.out.println("  Properties to update:");
         }
         this.updateProperties = getPropertiesAsList(properties);
+        if (this.searchOnly) {
+            this.searchOnly = false;
+        }
+    }
+
+    /**
+     * Get a list of properties whose value(s) will be appended to existing multi-value properties
+     * @return A list of properties to append
+     */
+    public ArrayList<Property> getAppendProperties() {
+        return appendProperties;
+    }
+
+    /**
+     * Set a list of properties whose value(s) will be appended to existing multi-value properties
+     * @param properties An array of properties (property=value) to append
+     * @throws InvalidPropertyException
+     */
+    public void setAppendProperties(String[] properties) throws InvalidPropertyException {
+        if (PageToolApp.verbose) {
+            System.out.println("  Properties to append:");
+        }
+        this.appendProperties = getPropertiesAsList(properties);
         if (this.searchOnly) {
             this.searchOnly = false;
         }
