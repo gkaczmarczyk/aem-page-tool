@@ -167,6 +167,43 @@ class OperationPropertiesTest {
         ArrayList<String> result = operationProperties.getDeleteProperties();
 
         assertEquals(Arrays.asList("prop1", "prop2"), result, "Should set delete properties");
+        assertNull(operationProperties.getRemoveValueProperties(), "Should not populate remove-value properties");
+    }
+
+    @Test
+    void testSetDeleteProperties_ValueRemoval_Single() throws InvalidPropertyException {
+        operationProperties.setDeleteProperties(new String[]{"tags=archived"});
+        ArrayList<Property> result = operationProperties.getRemoveValueProperties();
+
+        assertNull(operationProperties.getDeleteProperties(), "Should not populate whole-property deletes");
+        assertEquals(1, result.size(), "Should have one remove-value property");
+        assertEquals("tags", result.get(0).getName(), "Property name should match");
+        assertEquals("archived", result.get(0).getValue(), "Value to remove should match");
+        assertFalse(result.get(0).isMulti(), "Single value should not be multi-valued");
+    }
+
+    @Test
+    void testSetDeleteProperties_ValueRemoval_BracketValues() throws InvalidPropertyException {
+        operationProperties.setDeleteProperties(new String[]{"tags=[a,b]"});
+        ArrayList<Property> result = operationProperties.getRemoveValueProperties();
+
+        assertNull(operationProperties.getDeleteProperties(), "Should not populate whole-property deletes");
+        assertEquals(1, result.size(), "Should have one remove-value property");
+        assertEquals("tags", result.get(0).getName(), "Property name should match");
+        assertTrue(result.get(0).isMulti(), "Bracket values should be multi-valued");
+        assertArrayEquals(new String[]{"a", "b"}, result.get(0).getValues(), "Values to remove should be parsed from brackets");
+    }
+
+    @Test
+    void testSetDeleteProperties_Mixed() throws InvalidPropertyException {
+        operationProperties.setDeleteProperties(new String[]{"prop1", "tags=archived"});
+
+        assertEquals(Collections.singletonList("prop1"), operationProperties.getDeleteProperties(),
+                "Whole-property delete should be routed to delete properties");
+        ArrayList<Property> removals = operationProperties.getRemoveValueProperties();
+        assertEquals(1, removals.size(), "Should have one remove-value property");
+        assertEquals("tags", removals.get(0).getName(), "Property name should match");
+        assertEquals("archived", removals.get(0).getValue(), "Value to remove should match");
     }
 
     @Test
@@ -207,6 +244,7 @@ class OperationPropertiesTest {
         assertNull(operationProperties.getCopyFromProperties(), "Copy from properties should be null initially");
         assertNull(operationProperties.getCopyToProperties(), "Copy to properties should be null initially");
         assertNull(operationProperties.getDeleteProperties(), "Delete properties should be null initially");
+        assertNull(operationProperties.getRemoveValueProperties(), "Remove-value properties should be null initially");
         assertNull(operationProperties.getCreateNode(), "Create node should be null initially");
         assertFalse(operationProperties.isSearchOnly(), "Search only should be false initially");
     }

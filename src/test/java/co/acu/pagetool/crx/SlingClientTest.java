@@ -192,7 +192,7 @@ class SlingClientTest {
 
     @Test
     void testGetPropertyValue_NestedProperty() throws Exception {
-        String propertyJson = "{\"par\": {\"subpar\": {\"prop1\": \"nestedValue\"}}}";
+        String propertyJson = "{\"prop1\": \"nestedValue\"}";
         when(queryUrl.buildUrl("/content/testPage", "par/subpar")).thenReturn("http://localhost:4502/content/testPage/par/subpar.json");
 
         doAnswer(invocation -> {
@@ -276,8 +276,8 @@ class SlingClientTest {
 
         doAnswer(invocation -> {
             setPrivateField("lastStatusCode", 200);
-            setPrivateField("lastResponseText", "{\"par\": {\"subpar\": {\"prop1\": \"nestedValue\"}}}");
-            return "{\"par\": {\"subpar\": {\"prop1\": \"nestedValue\"}}}";
+            setPrivateField("lastResponseText", "{\"prop1\": \"nestedValue\"}");
+            return "{\"prop1\": \"nestedValue\"}";
         }).when(slingClient).executeGet(eq("http://localhost:4502/content/testPage/par/subpar.json"));
 
         doAnswer(invocation -> {
@@ -434,8 +434,9 @@ class SlingClientTest {
 
         verify(slingClient, times(1)).executePost(
                 eq("http://localhost:4502/content/testPage.json"),
-                argThat(params -> params.stream().anyMatch(p ->
-                        p.getName().equals("tags@Patch") && p.getValue().equals("+newTag"))));
+                argThat(params ->
+                        params.stream().anyMatch(p -> p.getName().equals("tags@Patch") && p.getValue().equals("true")) &&
+                        params.stream().anyMatch(p -> p.getName().equals("tags") && p.getValue().equals("+newTag"))));
     }
 
     @Test
@@ -453,6 +454,72 @@ class SlingClientTest {
         }).when(slingClient).executeGet(anyString());
 
         slingClient.appendPropertyValues(path);
+
+        verify(slingClient, never()).executePost(anyString(), anyList());
+    }
+
+    @Test
+    void testRemovePropertyValues_Success() throws Exception {
+        ArrayList<Property> removeProps = new ArrayList<>();
+        removeProps.add(new Property("tags", "archived"));
+        when(properties.getRemoveValueProperties()).thenReturn(removeProps);
+        when(properties.isCqPageType()).thenReturn(false);
+        when(queryUrl.buildUrl(false, path, removeProps)).thenReturn("http://localhost:4502/content/testPage.json");
+        when(queryUrl.buildUrl("/content/testPage", "")).thenReturn("http://localhost:4502/content/testPage.json");
+
+        doAnswer(invocation -> {
+            setPrivateField("lastStatusCode", 200);
+            return "{\"tags\": [\"archived\", \"keep\"]}";
+        }).when(slingClient).executeGet(anyString());
+
+        doAnswer(invocation -> {
+            setPrivateField("lastStatusCode", 200);
+            return null;
+        }).when(slingClient).executePost(anyString(), anyList());
+
+        slingClient.removePropertyValues(path);
+
+        verify(slingClient, times(1)).executePost(
+                eq("http://localhost:4502/content/testPage.json"),
+                argThat(params ->
+                        params.stream().anyMatch(p -> p.getName().equals("tags@Patch") && p.getValue().equals("true")) &&
+                        params.stream().anyMatch(p -> p.getName().equals("tags") && p.getValue().equals("-archived"))));
+    }
+
+    @Test
+    void testRemovePropertyValues_SkipsSingleValued() throws Exception {
+        ArrayList<Property> removeProps = new ArrayList<>();
+        removeProps.add(new Property("tags", "archived"));
+        when(properties.getRemoveValueProperties()).thenReturn(removeProps);
+        when(properties.isCqPageType()).thenReturn(false);
+        when(queryUrl.buildUrl(false, path, removeProps)).thenReturn("http://localhost:4502/content/testPage.json");
+        when(queryUrl.buildUrl("/content/testPage", "")).thenReturn("http://localhost:4502/content/testPage.json");
+
+        doAnswer(invocation -> {
+            setPrivateField("lastStatusCode", 200);
+            return "{\"tags\": \"single\"}";
+        }).when(slingClient).executeGet(anyString());
+
+        slingClient.removePropertyValues(path);
+
+        verify(slingClient, never()).executePost(anyString(), anyList());
+    }
+
+    @Test
+    void testRemovePropertyValues_SkipsMissing() throws Exception {
+        ArrayList<Property> removeProps = new ArrayList<>();
+        removeProps.add(new Property("tags", "archived"));
+        when(properties.getRemoveValueProperties()).thenReturn(removeProps);
+        when(properties.isCqPageType()).thenReturn(false);
+        when(queryUrl.buildUrl(false, path, removeProps)).thenReturn("http://localhost:4502/content/testPage.json");
+        when(queryUrl.buildUrl("/content/testPage", "")).thenReturn("http://localhost:4502/content/testPage.json");
+
+        doAnswer(invocation -> {
+            setPrivateField("lastStatusCode", 200);
+            return "{}";
+        }).when(slingClient).executeGet(anyString());
+
+        slingClient.removePropertyValues(path);
 
         verify(slingClient, never()).executePost(anyString(), anyList());
     }

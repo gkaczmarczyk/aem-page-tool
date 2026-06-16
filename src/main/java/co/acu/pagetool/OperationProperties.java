@@ -48,6 +48,11 @@ public class OperationProperties {
      */
     private ArrayList<String> deleteProperties;
 
+    /**
+     * A list of properties whose specific value(s) will be removed from existing multi-value properties
+     */
+    private ArrayList<Property> removeValueProperties = null;
+
     private Property createNode = null;
 
     private boolean searchOnly = false;
@@ -267,9 +272,6 @@ public class OperationProperties {
     }
 
     public void setDeleteProperties(String[] properties) throws InvalidPropertyException {
-        if (this.deleteProperties == null) {
-            this.deleteProperties = new ArrayList<>();
-        }
         if (PageToolApp.verbose) {
             System.out.println("  Properties to delete:");
         }
@@ -277,8 +279,22 @@ public class OperationProperties {
             if (PageToolApp.verbose) {
                 System.out.println("    " + prop);
             }
-            this.deleteProperties.add(prop);
+            if (prop.contains("=")) { // property=value removes a single value from a multi-value property
+                if (this.removeValueProperties == null) {
+                    this.removeValueProperties = new ArrayList<>();
+                }
+                this.removeValueProperties.add(Property.getProperty(prop));
+            } else { // property name only deletes the entire property
+                if (this.deleteProperties == null) {
+                    this.deleteProperties = new ArrayList<>();
+                }
+                this.deleteProperties.add(prop);
+            }
         }
+    }
+
+    public ArrayList<Property> getRemoveValueProperties() {
+        return removeValueProperties;
     }
 
     public Property getCreateNode() {

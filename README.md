@@ -189,6 +189,19 @@ Rather than updating properties, you can also delete properties that the node ma
 
 _Adding `-P` will delete only properties found in the `jcr:content` node of pages._
 
+If instead you only want to remove a **single value** from a multi-value property (leaving the property and its other values intact), include the value with `-d` using the `property=value` form:
+
+```
+./aempagetool.sh -n /content/path/to/my/page -d tags=archived
+```
+
+You can remove more than one value at once by using the bracket syntax, and you can specify `-d` multiple times:
+
+```
+./aempagetool.sh -n /content/path/to/my/page -d "tags=[archived,obsolete]" -d category=legacy
+```
+
+
 ##### ![rotating search icon](/imgs/find_replace_24.png) Replacing Properties
 
 You can specify both `-p` & `-d` arguments. If you specify `-d` & `-p` with the same property name, the update will follow the rules of the SlingPostServlet. _The property is first deleted and then filled with the new content._
@@ -328,7 +341,7 @@ Available options:
   -a,--add-node <arg>     Create node with name=jcr:primaryType (e.g. newNode=nt:unstructured)
   -c <arg>                Credentials: Full combo (e.g. admin:admin@localhost:4502)
   -C                      Bypass SSL certificate checking
-  -d,--delete <arg>       Property to delete
+  -d,--delete <arg>       Delete a property; use property=value to remove a single value from a multi-value property
   -f,--find <arg>         Search criteria (node_name or property=value)
   -h <arg>                Server: AEM hostname (default: localhost)
   -i,--copy-from <arg>    Property to copy from (use with -o)

@@ -66,7 +66,7 @@ public class PageToolApp {
                 .addOption("P", "page", false, "Restrict to cq:Page nodes (default: all node types)")
                 .addOption("R", "property-copy", false, "Copy properties instead of nodes (use with -i and -o)")
                 .addOption("r", "replace", true, "Replace string in -p property with this value")
-                .addOption("d", "delete", true, "Property to delete")
+                .addOption("d", "delete", true, "Delete a property; use property=value to remove a single value from a multi-value property")
                 .addOption("f", "find", true, "Search criteria (node_name or property=value)")
                 .addOption("y", false, "Perform a dry run (no updates)")
                 .addOption("x", false, "Verbose output");

@@ -131,10 +131,17 @@ public class SlingClient {
     public void queryPages(String path) throws IOException {
         List<Property> propertiesList = null;
         boolean isSimplePropertyUpdate = false;
-        if (properties.getDeleteProperties() != null && !properties.getDeleteProperties().isEmpty()) {
-            propertiesList = properties.getDeleteProperties().stream()
-                    .map(propName -> new Property(propName, ""))
-                    .collect(Collectors.toList());
+        boolean hasDeleteProperties = properties.getDeleteProperties() != null && !properties.getDeleteProperties().isEmpty();
+        boolean hasRemoveValueProperties = properties.getRemoveValueProperties() != null && !properties.getRemoveValueProperties().isEmpty();
+        if (hasDeleteProperties || hasRemoveValueProperties) {
+            ArrayList<Property> filterList = new ArrayList<>();
+            if (hasDeleteProperties) {
+                properties.getDeleteProperties().forEach(propName -> filterList.add(new Property(propName, "")));
+            }
+            if (hasRemoveValueProperties) {
+                filterList.addAll(properties.getRemoveValueProperties());
+            }
+            propertiesList = filterList;
         } else if (properties.getPropertyValueReplacementAsList() != null) {
             propertiesList = properties.getPropertyValueReplacementAsList();
         } else if (properties.getMatchingProperties() != null && !properties.getMatchingProperties().isEmpty()) {
@@ -212,19 +219,7 @@ public class SlingClient {
                 }
                 return null;
             }
-            JsonElement valueElement = root.getAsJsonObject();
-            if (!lastNode.isEmpty()) {
-                for (String node : lastNode.split("/")) {
-                    valueElement = valueElement.getAsJsonObject().get(node);
-                    if (valueElement == null || !valueElement.isJsonObject()) {
-                        if (PageToolApp.verbose) {
-                            Output.nwarn("Node '" + node + "' not found in path for property '" + propertyName + "' at " + url);
-                        }
-                        return null;
-                    }
-                }
-            }
-            valueElement = valueElement.getAsJsonObject().get(propName);
+            JsonElement valueElement = root.getAsJsonObject().get(propName);
             if (valueElement == null) {
                 if (PageToolApp.verbose) {
                     Output.nwarn("Property '" + propName + "' not found at " + url);
@@ -354,9 +349,41 @@ public class SlingClient {
             }
             // current is null (the @Patch will create a new multi-value property) or already an array.
             String[] valuesToAppend = prop.isMulti() ? prop.getValues() : new String[]{prop.getValue()};
+            params.add(new BasicNameValuePair(prop.getName() + SlingPostConstants.SUFFIX_PATCH, "true"));
             for (String value : valuesToAppend) {
-                params.add(new BasicNameValuePair(prop.getName() + SlingPostConstants.SUFFIX_PATCH,
-                        SlingPostConstants.PATCH_ADD + value));
+                params.add(new BasicNameValuePair(prop.getName(), SlingPostConstants.PATCH_ADD + value));
+            }
+        }
+        if (!params.isEmpty()) {
+            executePost(url, params);
+        }
+    }
+
+    /**
+     * Removes specific value(s) from existing multi-value properties using the Sling @Patch operation.
+     * The @Patch remove operation is order-preserving for the remaining elements and is a no-op if the
+     * value is not present. If a property exists but is single-valued, it is skipped to avoid corrupting it;
+     * if it does not exist, there is nothing to remove and it is skipped.
+     */
+    public void removePropertyValues(String path) throws IOException {
+        if (properties.getRemoveValueProperties() == null || properties.getRemoveValueProperties().isEmpty()) {
+            return;
+        }
+        String url = queryUrl.buildUrl(false, path, properties.getRemoveValueProperties());
+        List<NameValuePair> params = new ArrayList<>();
+        for (Property prop : properties.getRemoveValueProperties()) {
+            JsonElement current = getPropertyElement(path, prop.getName());
+            if (current == null) {
+                continue; // nothing to remove
+            }
+            if (!current.isJsonArray()) {
+                Output.nwarn("Property '" + prop.getName() + "' at " + path + " is single-valued; skipping value removal.");
+                continue;
+            }
+            String[] valuesToRemove = prop.isMulti() ? prop.getValues() : new String[]{prop.getValue()};
+            params.add(new BasicNameValuePair(prop.getName() + SlingPostConstants.SUFFIX_PATCH, "true"));
+            for (String value : valuesToRemove) {
+                params.add(new BasicNameValuePair(prop.getName(), SlingPostConstants.PATCH_REMOVE + value));
             }
         }
         if (!params.isEmpty()) {

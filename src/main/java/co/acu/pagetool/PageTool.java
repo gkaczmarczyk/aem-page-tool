@@ -88,6 +88,13 @@ public class PageTool {
                     Output.nwarn("Failed to delete properties: " + e.getMessage());
                 }
             }
+            if (properties.getRemoveValueProperties() != null) {
+                try {
+                    slingClient.removePropertyValues(pagePath);
+                } catch (IOException e) {
+                    Output.nwarn("Failed to remove property value(s): " + e.getMessage());
+                }
+            }
             if (properties.getCreateNode() != null) {
                 try {
                     slingClient.createNode(pagePath);
